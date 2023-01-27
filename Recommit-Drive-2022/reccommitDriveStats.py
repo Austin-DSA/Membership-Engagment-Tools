@@ -13,7 +13,7 @@ class CommmandFlags:
     
 def parseArgs(args: list[str]) -> CommmandFlags:
     if CommmandFlags.HELP in args:
-        print("usage: <current membership list> <call tracking list path> <phone bank attendance list> <political education attendance list>")
+        print("usage: <current membership list> <call tracking list path> <phone bank attendance list> <political education attendance list>\n Will output to files(overwrite if they already exist) in reccomit/final-stats directory")
         sys.exit(0)
     if len(args) != 5:
         print("Expect exactly 4 arguments, check help -h")
