@@ -158,8 +158,6 @@ def main(args):
         print("Found new column not perfoming any operations")
         return
 
-    # Get zip code
-
     # Copy to archive
     if flags.archive:
         print("Archiving and obfuscating")
@@ -226,7 +224,6 @@ def main(args):
     else:
         print("Skipping Action Network")
 
-    # TODO: Connect to google 
     #
     # Create the next phone bank list
     #
