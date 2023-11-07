@@ -5,8 +5,8 @@ import dataclasses
 
 class Constants:
     class VOTE_COLS:
-        EMAIL = "What's the email associated with your DSA membership?" # Will probably need updating
-        VOTE = "Should Austin DSA adopt this resolution?"
+        EMAIL = "email" # Will probably need updating
+        VOTE = "vote"
     class VOTE_TYPES:
         YES = "Yes"
         NO = "No"
@@ -52,10 +52,21 @@ def main(args):
     # Read in all the votes
     voteListCols, voteListRows = Utils.readCSV(flags.voteListPath)
     voteColIndexes = Utils.getIndexesForColumns(voteListCols, [Constants.VOTE_COLS.EMAIL, Constants.VOTE_COLS.VOTE])
-    votes = [Vote(voteRow[voteColIndexes[Constants.VOTE_COLS.EMAIL]].lower().strip(), voteRow[voteColIndexes[Constants.VOTE_COLS.VOTE]]) for voteRow in voteListRows]
+    allVotes = [Vote(voteRow[voteColIndexes[Constants.VOTE_COLS.EMAIL]].lower().strip(), voteRow[voteColIndexes[Constants.VOTE_COLS.VOTE]]) for voteRow in voteListRows]
+
+    # Remove earlier votes from the same person
+    # Assumes things are sorted in voting list by time
+    alreadyVoted = set()
+    votes = []
+    for v in reversed(allVotes):
+        if v.email in alreadyVoted:
+            print(f"{v.email} voted twice")
+            continue
+        alreadyVoted.add(v.email)
+        votes.append(v)
 
     membershipListCols, membershipListRows = Utils.readCSV(flags.mebershipListPath)
-    membershipListColIndexes = Utils.getIndexesForColumns(membershipListCols, [Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL])
+    membershipListColIndexes = Utils.getIndexesForColumns(membershipListCols, [Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL])
 
     numYes = 0
     numNo = 0
@@ -70,7 +81,7 @@ def main(args):
                 continue
 
             vote.found = True
-            vote.status = row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL]]
+            vote.status = "good standing"
             if vote.status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
                 break
             if vote.vote == Constants.VOTE_TYPES.YES:
