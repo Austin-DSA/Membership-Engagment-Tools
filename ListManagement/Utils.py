@@ -14,11 +14,27 @@ class Constants:
         LAST_NAME = "last_name"
         STANDING_COL = "membership_status"
         EMAIL_COL = "email"
+        
+        # One of the following two will exist
         MAILING_ADDRESS_1 = "mailing_address1"
+        ADDRESS_1 = "address1"
+
+        # One of the following two will exist
         MAILING_ADDRESS_2 = "mailing_address2"
+        ADDRESS_2 = "address2"
+
+        # One of the following two will exist
         MAILING_CITY = "mailing_city"
+        CITY = "city"
+        
+        # One of the following two will exist
         MAILING_STATE = "mailing_state"
+        STATE = "state"
+
+        # One of the following two will exist
         ZIP_COL = "mailing_zip"
+        ZIP_COL2 = "zip"
+
         BILLING_ZIP_COL = "billing_zip"
         PHONE = "best_phone"
         
@@ -29,6 +45,11 @@ class Constants:
         MEMBER = "member"
     
 
+def getValueWithAnyName(d, names):
+    for n in names:
+        if n in d:
+            return d[n]
+    raise IndexError(f"None of {names} found in {d}")
 
 def readCSV(filename):
     rows = []

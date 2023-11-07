@@ -1,21 +1,23 @@
 
 import datetime
-import csv
-from pickle import TRUE
-import shutil
+import argparse
 import sys
 import os
 import Utils
+import typing
+import ActionNetworkAPI
+import GoogleDriveAPI
 
 class Constants:
     # Paths
     RETENTION_DATA_FILE_PATH = os.path.join(os.path.dirname(__file__),"adsa-retention-data.csv")
     ARCHIVE_FOLDER_PATH = os.path.join(os.path.dirname(__file__),"Archive")
     OUTPUT_DIR_PATH = os.path.join(os.path.dirname(__file__),"Output")
-    TODAY_STR = datetime.date.today().isoformat()
+    
     ZIP_CODE_COL = "Zip_Code"
     
     COL_DO_NOT_INCLUDE = "N/A"
+    # Only add but can map to same value 
     COL_TO_ACTION_NETWORK = {
         "prefix"                        : COL_DO_NOT_INCLUDE,
         "mailing_pref"                  : COL_DO_NOT_INCLUDE,
@@ -30,11 +32,17 @@ class Constants:
         "billing_state"                : COL_DO_NOT_INCLUDE,	
         "billing_zip"                  : COL_DO_NOT_INCLUDE,
         # TODO Combine mailing addresses
-        "mailing_address1"             : "address",
-        "mailing_address2"             : COL_DO_NOT_INCLUDE,
-        "mailing_city"                 : "city",
-        "mailing_state"                : "state",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL : "zip_code",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1 : "address",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1: "address",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2 : "address2",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2 : "address2",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY : "city",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.CITY         : "city",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE : "state",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.STATE : "state",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL  : "zip_code",
+        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2 : "zip_code",
+        "country"                      : "country",
         "best_phone"                   : "can2_phone",
         "mobile_phone"                 : COL_DO_NOT_INCLUDE,
         "home_phone"                   : COL_DO_NOT_INCLUDE,
@@ -48,6 +56,7 @@ class Constants:
         "membership_type"              : COL_DO_NOT_INCLUDE,
         "monthly_dues_status"          : COL_DO_NOT_INCLUDE,	
         "annual_recurring_dues_status" : COL_DO_NOT_INCLUDE,
+        "yearly_dues_status"           : COL_DO_NOT_INCLUDE,
         Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL : "Membership Status",
         "memb_status_letter"           : "memb_status_letter",
         "union_member"                 : "Are You a Union Member?",
@@ -57,7 +66,10 @@ class Constants:
         "student_school_name"          : "student_school_name",	
         "ydsa_chapter"                 : "YDSA Chapter",
         "dsa_chapter"                  : "DSA_chapter",
-        "accomodations"                : "accomodations"
+        "accomodations"                : "accomodations",
+        "accommodations"               : "accomodations",
+        "race"                         : "race",
+
     }
     COLS_TO_KEEP_FOR_ARCHIVE = {
         "prefix"                        : False,
@@ -73,11 +85,17 @@ class Constants:
         "billing_state"                : False,
         "billing_zip"                  : False,
         # TODO Combine mailing addresses
-        "mailing_address1"             : False,
-        "mailing_address2"             : False,
-        "mailing_city"                 : False,
-        "mailing_state"                : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1 : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1 : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2 : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2 : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.CITY : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE : False,
+        Utils.Constants.MEMBERSHIP_LIST_COLS.STATE : False,
+        "country"                      : False,
         Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL : True,
+        "zip"                          : True,
         "best_phone"                   : False,
         "mobile_phone"                 : False,
         "home_phone"                   : False,
@@ -91,6 +109,7 @@ class Constants:
         "membership_type"              : True,
         "monthly_dues_status"          : True,
         "annual_recurring_dues_status" : True,
+        "yearly_dues_status"           : True,
         Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL : True,
         "memb_status_letter"           : True,
         "union_member"                 : True,
@@ -100,33 +119,86 @@ class Constants:
         "student_school_name"          : True,
         "ydsa_chapter"                 : True,
         "dsa_chapter"                  : True,
-        "accomodations"                : True
+        "accomodations"                : True,
+        "accommodations"               : True,
+        "race"                         : True
     }
 
 class CommmandFlags:
-    DO_NOT_ARCHIVE = "-narch"
-    DO_NOT_RETENTION = "-nret"
-    DO_NOT_ACTION_NETWORK = "-nan"
-    HELP = "-h"
+    FILENAME = "filename"
+    AUTOMATE = "--automate"
+    AUTOMATE_AN = "--auto_an"
+    AUTOMATE_GDRIVE ="--auto_gd"
+    DO_NOT_ARCHIVE = "--narch"
+    DO_NOT_RETENTION = "--nret"
+    DO_NOT_ACTION_NETWORK = "--nan"
+    USE_LOCAL_RETENTION = "--local_retention"
 
-    def __init__(self, filename, doNotArchive, doNotRetention, doNotActionNetwork) -> None:
+    def __init__(self, filename : str, doNotArchive : bool, doNotRetention : bool, doNotActionNetwork : bool, automateActionNetwork : bool, automateGoogleDrive: bool, useLocalRetention : bool) -> None:
         self.filename = filename
         self.archive = not doNotArchive
         self.retention = not doNotRetention
         self.actionNetwork = not doNotActionNetwork
+        self.automateActionNetwork = automateActionNetwork
+        self.automateGoogleDrive = automateGoogleDrive
+        self.useLocalRetention = useLocalRetention
     
-def parseArgs(args):
-    if CommmandFlags.HELP in args:
-        print("usage: <inputCSV> [-narch] [-nret] [-nan]")
-        sys.exit(0)
-    if len(args) < 2:
-        print("First argument is necessary and must be the file name")
-    fileName = args[1]
-    return CommmandFlags(fileName, CommmandFlags.DO_NOT_ARCHIVE in args, CommmandFlags.DO_NOT_RETENTION in args, CommmandFlags.DO_NOT_ACTION_NETWORK in args)
+def parseArgs():
+    # I am using hardcoded strings here since you can't subscript the parsed args by the argument name
+    # NOW WHY YOU CAN"T IS BEYONd ME and if you want to yell at python for me I would kiss you
+    # Since the scope of the strings is literally just this function I figured making constants would be a bit much
+    # Especially since the error from an incorrect string should stop the program before starting
+    parser = argparse.ArgumentParser(description="Process the member list from National DSA")
+    parser.add_argument(CommmandFlags.FILENAME, 
+                        help="File name of the membership list")    
+    parser.add_argument(CommmandFlags.AUTOMATE, 
+                        dest="automate", 
+                        default=False, 
+                        action="store_true", 
+                        help = "Automate both Action network and Google Drive. If false will use local file for retention data.")
+    parser.add_argument(CommmandFlags.AUTOMATE_AN, 
+                        dest="automate_an", 
+                        default=False, 
+                        action="store_true", 
+                        help = "Automate uploading to Action network")
+    parser.add_argument(CommmandFlags.AUTOMATE_GDRIVE,       
+                        dest="automate_gdrive", 
+                        default=False, 
+                        action="store_true",  
+                        help = "Automate uploading retention data to Austin DSA Google drive (will download retention data from google drive). Overrides --local-retention")
+    parser.add_argument(CommmandFlags.DO_NOT_ARCHIVE,        
+                        dest="do_not_archive", 
+                        default=False, 
+                        action="store_true",  
+                        help = "Skip archiving step, will skip uploading archive to google drive but not retention")
+    parser.add_argument(CommmandFlags.DO_NOT_RETENTION,      
+                        dest="do_not_retention", 
+                        default=False, 
+                        action="store_true", 
+                        help = "Skip retention step, will skip any automated google drive steps")
+    parser.add_argument(CommmandFlags.DO_NOT_ACTION_NETWORK, 
+                        dest="do_not_action_network", 
+                        default=False, 
+                        action="store_true", 
+                        help="Skip Action Network steps. Will skip upload if automated.")
+    parser.add_argument(CommmandFlags.USE_LOCAL_RETENTION,   
+                        dest="use_local_retention", 
+                        default=True, 
+                        action="store_true", 
+                        help="If automating will use local retention file instead of downloading. Fails if local files DNE.")
+    args = parser.parse_args()
+    return CommmandFlags(args.filename, 
+                         doNotArchive = args.do_not_archive, 
+                         doNotRetention = args.do_not_retention, 
+                         doNotActionNetwork = args.do_not_action_network,
+                         automateActionNetwork = args.automate or args.automate_an,
+                         automateGoogleDrive = args.automate or args.automate_gdrive,
+                         useLocalRetention=args.use_local_retention)
     
 def main(args):
-    flags = parseArgs(args)
+    flags = parseArgs()
     inputCSV = os.path.join(os.path.dirname(__file__), flags.filename)
+    print(inputCSV)
     if not os.path.exists(inputCSV):
         print("Input file DNE")
         return
@@ -152,13 +224,13 @@ def main(args):
         print("Found new column not perfoming any operations")
         return
 
-    # Get zip code
+    googleDriveApi = None
+    if flags.automateGoogleDrive:
+        googleDriveApi = GoogleDriveAPI.GoogleDriveAPI()
 
     # Copy to archive
     if flags.archive:
         print("Archiving and obfuscating")
-        archiveName = "members-"+Constants.TODAY_STR+".csv"
-        # shutil.copyfile(inputCSV, os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName))
         # Convert file to archive obfuscate
         colIndexs = []
         newCols = []
@@ -168,7 +240,12 @@ def main(args):
                 newCols.append(cols[index])
         # Filter rows
         archiveRows = [[row[i].strip() for i in colIndexs] for row in rows]
-        Utils.writeCSVFile(os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName), newCols, archiveRows)
+
+        if flags.automateGoogleDrive:
+            googleDriveApi.uploadArchiveRetentionData(cols=newCols, rows=archiveRows)
+        else:
+            archiveName = "members-"+Utils.Constants.TODAY_STR+".csv"
+            Utils.writeCSVFile(os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName), newCols, archiveRows)
 
     if flags.retention:
         print("Retention")
@@ -199,28 +276,78 @@ def main(args):
                 print("Found unexpected value")
                 print(status)
                 return
-        Utils.appendCSVFile(Constants.RETENTION_DATA_FILE_PATH, (Constants.TODAY_STR, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))
-        
+        if flags.useLocalRetention and not flags.automateGoogleDrive:
+            Utils.appendCSVFile(Constants.RETENTION_DATA_FILE_PATH, (Utils.Constants.TODAY_STR, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))
+        elif flags.automateGoogleDrive:
+            googleDriveApi.uploadNewRetentionData(membersGoodStanding=membersGoodStanding, membersMember=membersMember, membersLapsed=membersLapsed)
+        else:
+            print("Neither local retention nor automated google drive was specified. Not saving retention.")
     else:
         print("Skipping Retention")
 
     # Create csv for action network
     if flags.actionNetwork:
-        print("Creating action network upload")
-        # Convert cols to Action network
-        colIndexs = []
-        newCols = []
-        for index in range(len(cols)):
-            if cols[index] in Constants.COL_TO_ACTION_NETWORK and Constants.COL_TO_ACTION_NETWORK[cols[index]] != Constants.COL_DO_NOT_INCLUDE:
-                colIndexs.append(index)
-                newCols.append(Constants.COL_TO_ACTION_NETWORK[cols[index]])
-        # Filter rows
-        actionNetworkRows = [[row[i].strip() for i in colIndexs] for row in rows]
-        Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, "action-network-"+Constants.TODAY_STR+".csv"), newCols, actionNetworkRows)
+        if not flags.automateActionNetwork:
+            print("Creating action network upload file")
+            # Convert cols to Action network
+            colIndexs = []
+            newCols = []
+            for index in range(len(cols)):
+                if cols[index] in Constants.COL_TO_ACTION_NETWORK and Constants.COL_TO_ACTION_NETWORK[cols[index]] != Constants.COL_DO_NOT_INCLUDE:
+                    colIndexs.append(index)
+                    newCols.append(Constants.COL_TO_ACTION_NETWORK[cols[index]])
+            # Filter rows
+            actionNetworkRows = [[row[i].strip() for i in colIndexs] for row in rows]
+            Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, "action-network-"+Utils.Constants.TODAY_STR+".csv"), newCols, actionNetworkRows)
+        else:
+            # For uploads we will not convert to our old columns but instead use what national sends down
+            # For non-automated will keep the conversion, but our columns include spaces and capital letters
+            # The API connector will auto-lowercase
+            # We shouldn't lose any columns but we may have duplicates
+            print("Uploading members to action network")
+            # A bit redundant to build this map but it will make building the person more convient later
+            # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
+            colToIndex = {}
+            for index in range(len(cols)):
+                colToIndex[cols[index]] = index
+            nonCustomFields = set([Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.CITY,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.STATE,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME,
+                                   Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME])
+            peopleToPost = []
+            for row in rows:
+                customFields = {}
+                for col in cols:
+                    if col in nonCustomFields:
+                        continue
+                    customFields[col] = row[colToIndex[col]]
+
+                peopleToPost.append(ActionNetworkAPI.Person(firstName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]],
+                                                            lastName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]],
+                                                            email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
+                                                            phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
+                                                            customFields=customFields,
+                                                            address=ActionNetworkAPI.PersonAddress(
+                                                                region=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE, Utils.Constants.MEMBERSHIP_LIST_COLS.STATE])],
+                                                                zip_code=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2])],
+                                                                city=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY, Utils.Constants.MEMBERSHIP_LIST_COLS.CITY])],
+                                                                address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])], 
+                                                                               row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
+                                                            )))
+            api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
+            api.postPeople(people=peopleToPost)
     else:
         print("Skipping Action Network")
-
-    # TODO: Connect to google drive
 
 if __name__ == "__main__":
     main(sys.argv)
