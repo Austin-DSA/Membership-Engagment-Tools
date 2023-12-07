@@ -2,10 +2,12 @@ import requests
 import typing
 import dataclasses
 import time
+import datetime
 
 class Constants:
         # URLS
         API_ENTRY = "https://actionnetwork.org/api/v2/"
+        BACKGROUN_PROCESSING_QUERY_PARAM = "background_request"
 
         # Person Keys
         EMAIL = "address"
@@ -14,6 +16,7 @@ class Constants:
         POSTAL_ADDRESSES = "postal_addresses"
         LAST_NAME = "family_name"
         FIRST_NAME = "given_name"
+        CUSTOM_FIELDS = "custom_fields"
         
         # Phone Number Keys
         PHONE = "number"
@@ -76,7 +79,8 @@ class Person:
             Constants.LAST_NAME : self.lastName,
             Constants.EMAIL_ADDRESSES : [{Constants.EMAIL : self.email}],
             Constants.PHONE_NUMBERS : [{Constants.PHONE : self.phone}],
-            Constants.POSTAL_ADDRESSES : [self.address.toDict()]
+            Constants.POSTAL_ADDRESSES : [self.address.toDict()],
+            Constants.CUSTOM_FIELDS : {}
         }
         restrictedCols = set([Constants.FIRST_NAME, Constants.LAST_NAME, Constants.EMAIL_ADDRESSES, Constants.PHONE_NUMBERS, Constants.POSTAL_ADDRESSES])
         for k,v in self.customFields.items():
@@ -85,7 +89,7 @@ class Person:
                   raise InvalidPerson("Custom field "+k+" conflicts with restricted API keys")
              if type(v) != str:
                   raise InvalidPerson("Custom field "+k+" of value "+str(v)+" is not of string")
-             personDict[outKey] = v
+             personDict[Constants.CUSTOM_FIELDS][k] = v
         return personDict
 
 class InvalidPerson(Exception):
@@ -134,7 +138,7 @@ class ActionNetworkAPI:
     # If any of the post request fails no later request will be attempted and an exception will be raised
     # CURRENTLY DO NOT RETRY PROGRAMATICALLY UPON EXCEPTION
     # Action Network asks for exopential backoff on failures and this function does not account for that
-    def postPeople(self, people: list[type[Person]]) -> None:
+    def postPeople(self, people: list[type[Person]], useBackgroundProcessing:bool = True) -> None:
          # Currently (2023-04-15) Action Network rate limits at 4 per second https://actionnetwork.org/docs/#considerations
          # To avoid any possible conflicts we will wait 0.35 seconds per request
          # Upon failure a exception will be raised and assumed to kill the program
@@ -142,16 +146,24 @@ class ActionNetworkAPI:
          currentPerson = 0
          for person in people:
               print("Uploading "+person.firstName+" "+person.lastName+" "+str(currentPerson)+"/"+str(numPeople))
-              self._postPerson(person)
-              time.sleep(0.35)
+              startTime = datetime.datetime.now()
+              self._postPerson(person, useBackgroundProcessing)
+              # Sleep to avoid rate limit if we aren't background processing
+              timeInRequest = datetime.datetime.now() - startTime
+              if not useBackgroundProcessing and timeInRequest < datetime.timedelta(seconds=0.35):
+                   timeToSleep = 0.35 - timeInRequest.seconds
+                   time.sleep(timeToSleep)
               currentPerson += 1
     
     # Do not use this directly
     # The API is rate limited so using this in a tight for loop could cause issues
     # To post a single person use postPeople() with a list of a single person
-    def _postPerson(self, person: type[Person]) -> None:
+    def _postPerson(self, person: type[Person], useBackgroundProcessing: bool  = True) -> None:
         # Currently we do not support adding or removing tags
-        req = requests.post(self.personSignupHelper, json=person.toSignupHelperDict(), headers=self._headersForRequest())
+        params = {}
+        if useBackgroundProcessing:
+          params[Constants.BACKGROUN_PROCESSING_QUERY_PARAM] = True
+        req = requests.post(self.personSignupHelper, json=person.toSignupHelperDict(), headers=self._headersForRequest(), params=params)
         # We currently don't care about the response as long as it is not failure
         req.raise_for_status()
 
