@@ -48,15 +48,15 @@ class Constants:
         "home_phone"                   : COL_DO_NOT_INCLUDE,
         "work_phone"                   : COL_DO_NOT_INCLUDE,
         Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL : "email",
-        "mail_preference"              : COL_DO_NOT_INCLUDE,	
+        "mail_preference"              : "mail_preference",	
         "do_not_call"                  : "Do_Not_Call",
         "p2ptext_optout"               : "p2ptext_optout",
         "join_date"                    : "Join_Date",
         "xdate"                        : "Xdate",
-        "membership_type"              : COL_DO_NOT_INCLUDE,
-        "monthly_dues_status"          : COL_DO_NOT_INCLUDE,	
-        "annual_recurring_dues_status" : COL_DO_NOT_INCLUDE,
-        "yearly_dues_status"           : COL_DO_NOT_INCLUDE,
+        "membership_type"              : "membership_type",
+        "monthly_dues_status"          : "monthly_dues_status",	
+        "annual_recurring_dues_status" : "annual_recurring_dues_status",
+        "yearly_dues_status"           : "yearly_dues_status",
         Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL : "Membership Status",
         "memb_status_letter"           : "memb_status_letter",
         "union_member"                 : "Are You a Union Member?",
@@ -133,8 +133,9 @@ class CommmandFlags:
     DO_NOT_RETENTION = "--nret"
     DO_NOT_ACTION_NETWORK = "--nan"
     USE_LOCAL_RETENTION = "--local_retention"
+    BACKGROUND = "--background"
 
-    def __init__(self, filename : str, doNotArchive : bool, doNotRetention : bool, doNotActionNetwork : bool, automateActionNetwork : bool, automateGoogleDrive: bool, useLocalRetention : bool) -> None:
+    def __init__(self, filename : str, doNotArchive : bool, doNotRetention : bool, doNotActionNetwork : bool, automateActionNetwork : bool, automateGoogleDrive: bool, useLocalRetention : bool, useANBackground: bool) -> None:
         self.filename = filename
         self.archive = not doNotArchive
         self.retention = not doNotRetention
@@ -142,6 +143,7 @@ class CommmandFlags:
         self.automateActionNetwork = automateActionNetwork
         self.automateGoogleDrive = automateGoogleDrive
         self.useLocalRetention = useLocalRetention
+        self.useANBackground = useANBackground
     
 def parseArgs():
     # I am using hardcoded strings here since you can't subscript the parsed args by the argument name
@@ -186,6 +188,12 @@ def parseArgs():
                         default=True, 
                         action="store_true", 
                         help="If automating will use local retention file instead of downloading. Fails if local files DNE.")
+    parser.add_argument(CommmandFlags.BACKGROUND,
+                        dest="background",
+                        default=False,
+                        action="store_true",
+                        help="If supplied then when uploading to AN will include the background tag. Theoretically should be faster however testing hasn't been clear."
+                        )
     args = parser.parse_args()
     return CommmandFlags(args.filename, 
                          doNotArchive = args.do_not_archive, 
@@ -193,7 +201,8 @@ def parseArgs():
                          doNotActionNetwork = args.do_not_action_network,
                          automateActionNetwork = args.automate or args.automate_an,
                          automateGoogleDrive = args.automate or args.automate_gdrive,
-                         useLocalRetention=args.use_local_retention)
+                         useLocalRetention=args.use_local_retention,
+                         useANBackground=args.background)
     
 def main(args):
     flags = parseArgs()
@@ -345,7 +354,7 @@ def main(args):
                                                                                row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
                                                             )))
             api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
-            api.postPeople(people=peopleToPost)
+            api.postPeople(people=peopleToPost, useBackgroundProcessing=flags.useANBackground)
     else:
         print("Skipping Action Network")
 
