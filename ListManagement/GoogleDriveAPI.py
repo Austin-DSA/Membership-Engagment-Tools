@@ -1,10 +1,13 @@
 from importlib.metadata import files
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from oauth2client.service_account import ServiceAccountCredentials
 import Utils
 import logging
+import os
 
 # https://pythonhosted.org/PyDrive/
+# https://medium.com/analytics-vidhya/pydrive-to-download-from-google-drive-to-a-remote-machine-14c2d086e84e
 
 class Constants:
     class Metadata:
@@ -13,6 +16,7 @@ class Constants:
         ID = "id"
         MIME_TYPE = "mimeType"
         MIME_TYE_CSV = "text/csv"
+        JSON_KEY_FILE = os.path.join(os.path.dirname(__file__),"googleDriveServiceAccountKey.json")
     
     class Paths:
         GOOGLE_AUTH_YAML = "googleAuthSettings.yaml"
@@ -22,24 +26,14 @@ class Constants:
         RETENTION_ARCHIVE_FOLDER = "1iD0WtMeP9DvBA1HULJbWPRcLWKPddve-"
         RETENTION_DATA_FILE = "1ORnCuXxm1eFXVtWfeEn9fsjY6Nd3N3Ld"
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
-
 CLIENT_SECRET = "./client_secret.json"
 TOKEN_FILE = "./token.json"
 
-def create_authenticated_drive():
-    gauth = GoogleAuth("googleAuthSettings.yaml")
-    #gauth.settings['save_credentials'] = True
-    gauth.LocalWebserverAuth() # client_secrets.json need to be in the same directory as the script
-    drive = GoogleDrive(gauth)
-    drive
-    return drive
-
 class GoogleDriveAPI:
     def __init__(self) -> None:
-        self.gauth = GoogleAuth("googleAuthSettings.yaml")
-        self.gauth.LocalWebserverAuth() # client_secrets.json need to be in the same directory as the script
+        self.gauth = GoogleAuth()
+        scope = ["https://www.googleapis.com/auth/drive"]
+        self.gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name(Constants.Metadata.JSON_KEY_FILE, scope)
         self.drive = GoogleDrive(self.gauth)
     
     # Will take the given rows and cols and upload it to the retention archive directory with the given name
