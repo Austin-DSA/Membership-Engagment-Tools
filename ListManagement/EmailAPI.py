@@ -82,7 +82,7 @@ class EmailAccount:
     
     def markDownloadedEmailAsUnread(self):
         if self.lastReturnedMessage:
-            self.mail.store(self.lastReturnedMessage, '-FLAGS', '\Seen')
+            self.mail.store(self.lastReturnedMessage[0], '-FLAGS', '\\Seen')
 
     def downloadZipAttachmentFromMostRecentUnreadEmail(self, fromAddress, subjectContaining, downloadPath, afterDate = None, expectedFileName = None):
         message = self._getMostRecentUnreadEmailFrom(address=fromAddress, requiresAttachment=True, subjectContaining=subjectContaining)

@@ -200,7 +200,7 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
             logging.info("Found old downloaded zip file, deleting")
             os.remove(Constants.DOWNLOAD_ZIP_PATH)
             
-    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.LEADERSHIP_EMAIL,
+    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.MEMBERSHIP_EMAIL,
                                                                 Constants.EXPECTED_EMAIL_SUBJECT,  
                                                                 Constants.DOWNLOAD_ZIP_PATH,
                                                                 datetime.datetime.now() - datetime.timedelta(days=10), 
