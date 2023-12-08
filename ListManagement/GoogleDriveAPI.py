@@ -2,6 +2,7 @@ from importlib.metadata import files
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import Utils
+import logging
 
 # https://pythonhosted.org/PyDrive/
 
@@ -57,7 +58,7 @@ class GoogleDriveAPI:
     def uploadNewRetentionData(self, membersGoodStanding: int, membersMember: int, membersLapsed:int , date=Utils.Constants.TODAY_STR):
         retentionFile = self.drive.CreateFile({Constants.Metadata.ID : Constants.IDs.RETENTION_DATA_FILE})
         if retentionFile[Constants.Metadata.TITLE] != Constants.Paths.RETENTION_DATA_FILE:
-            print("Recieved unexpected file for retention "+str(retentionFile))
+            logging.error("Recieved unexpected file for retention "+str(retentionFile))
             return
         
         newContent = Utils.appendCSVString(retentionFile.GetContentString(), (date, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))

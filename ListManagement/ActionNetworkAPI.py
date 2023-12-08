@@ -3,6 +3,7 @@ import typing
 import dataclasses
 import time
 import datetime
+import logging
 
 class Constants:
         # URLS
@@ -145,7 +146,7 @@ class ActionNetworkAPI:
          numPeople = len(people)
          currentPerson = 0
          for person in people:
-              print("Uploading "+person.firstName+" "+person.lastName+" "+str(currentPerson)+"/"+str(numPeople))
+              logging.info("Uploading "+person.firstName+" "+person.lastName+" "+str(currentPerson)+"/"+str(numPeople))
               startTime = datetime.datetime.now()
               self._postPerson(person, useBackgroundProcessing)
               # Sleep to avoid rate limit if we aren't background processing

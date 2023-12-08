@@ -7,80 +7,49 @@ import Utils
 import typing
 import ActionNetworkAPI
 import GoogleDriveAPI
+import logging
+import EmailAPI
+import zipfile
+
+class MembershipListProcessingException(Exception):
+    pass
 
 class Constants:
     # Paths
+    WORKING_DIR = os.path.join(os.path.dirname(__file__), "workingDir")
     RETENTION_DATA_FILE_PATH = os.path.join(os.path.dirname(__file__),"adsa-retention-data.csv")
     ARCHIVE_FOLDER_PATH = os.path.join(os.path.dirname(__file__),"Archive")
     OUTPUT_DIR_PATH = os.path.join(os.path.dirname(__file__),"Output")
+    DOWNLOAD_ZIP_PATH = os.path.join(WORKING_DIR,"downloadedList.zip")
+    DOWNLOAD_ZIP_LIST_MEMBER = "austin_membership_list.csv"
+    DOWNLOAD_LIST_PATH = os.path.join(WORKING_DIR,"austin_membership_list.csv")
+    EMAIL_CREDS = os.path.join(os.path.dirname(__file__),"email.txt")
+    EXPECTED_EMAIL_SUBJECT = "Austin Membership List"
+
+    LEADERSHIP_EMAIL = "leadership@austindsa.org"
+    MEMBERSHIP_EMAIL = "membership@austindsa.org"
+    TECH_EMAIL = "tech@austindsa.org"
     
+    LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.txt"
+    LOG_PATH = os.path.join(WORKING_DIR,LOG_NAME)
+
+    AN_API_KEY_FILE = "actionNetworkAPIKey.txt"
+
+    EXPECTED_LIST_ATTACHMENT_NAME = "austin_membership_list.zip"
     ZIP_CODE_COL = "Zip_Code"
     
     COL_DO_NOT_INCLUDE = "N/A"
     # Only add but can map to same value 
-    COL_TO_ACTION_NETWORK = {
-        "prefix"                        : COL_DO_NOT_INCLUDE,
-        "mailing_pref"                  : COL_DO_NOT_INCLUDE,
-        "actionkit_id"                        : COL_DO_NOT_INCLUDE,
-        "first_name"                   : "first_name",	
-        "middle_name"                  : COL_DO_NOT_INCLUDE,	
-        "last_name"                    : "last_name",	
-        "suffix"                       : COL_DO_NOT_INCLUDE,
-        "billing_address1"       : COL_DO_NOT_INCLUDE,	
-        "billing_address2"       : COL_DO_NOT_INCLUDE,	
-        "billing_city"                 : COL_DO_NOT_INCLUDE,
-        "billing_state"                : COL_DO_NOT_INCLUDE,	
-        "billing_zip"                  : COL_DO_NOT_INCLUDE,
-        # TODO Combine mailing addresses
-        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1 : "address",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1: "address",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2 : "address2",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2 : "address2",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY : "city",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.CITY         : "city",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE : "state",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.STATE : "state",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL  : "zip_code",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2 : "zip_code",
-        "country"                      : "country",
-        "best_phone"                   : "can2_phone",
-        "mobile_phone"                 : COL_DO_NOT_INCLUDE,
-        "home_phone"                   : COL_DO_NOT_INCLUDE,
-        "work_phone"                   : COL_DO_NOT_INCLUDE,
-        Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL : "email",
-        "mail_preference"              : "mail_preference",	
-        "do_not_call"                  : "Do_Not_Call",
-        "p2ptext_optout"               : "p2ptext_optout",
-        "join_date"                    : "Join_Date",
-        "xdate"                        : "Xdate",
-        "membership_type"              : "membership_type",
-        "monthly_dues_status"          : "monthly_dues_status",	
-        "annual_recurring_dues_status" : "annual_recurring_dues_status",
-        "yearly_dues_status"           : "yearly_dues_status",
-        Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL : "Membership Status",
-        "memb_status_letter"           : "memb_status_letter",
-        "union_member"                 : "Are You a Union Member?",
-        "union_name"                   : "Union",
-        "union_local"                  : "Union Local",
-        "student_yes_no"               : "student_yes_no",
-        "student_school_name"          : "student_school_name",	
-        "ydsa_chapter"                 : "YDSA Chapter",
-        "dsa_chapter"                  : "DSA_chapter",
-        "accomodations"                : "accomodations",
-        "accommodations"               : "accomodations",
-        "race"                         : "race",
-
-    }
     COLS_TO_KEEP_FOR_ARCHIVE = {
-        "prefix"                        : False,
-        "mailing_pref"                  : False,
-        "actionkit_id"                        : False,
+        "prefix"                       : False,
+        "mailing_pref"                 : False,
+        "actionkit_id"                 : False,
         "first_name"                   : False,
         "middle_name"                  : False,
         "last_name"                    : False,
         "suffix"                       : False,
-        "billing_address1"       : False,
-        "billing_address2"       : False,
+        "billing_address1"             : False,
+        "billing_address2"             : False,
         "billing_city"                 : False,
         "billing_state"                : False,
         "billing_zip"                  : False,
@@ -151,7 +120,7 @@ def parseArgs():
     # Since the scope of the strings is literally just this function I figured making constants would be a bit much
     # Especially since the error from an incorrect string should stop the program before starting
     parser = argparse.ArgumentParser(description="Process the member list from National DSA")
-    parser.add_argument(CommmandFlags.FILENAME, 
+    parser.add_argument(CommmandFlags.FILENAME,
                         help="File name of the membership list")    
     parser.add_argument(CommmandFlags.AUTOMATE, 
                         dest="automate", 
@@ -203,160 +172,231 @@ def parseArgs():
                          automateGoogleDrive = args.automate or args.automate_gdrive,
                          useLocalRetention=args.use_local_retention,
                          useANBackground=args.background)
+
+def setup():
+    if not os.path.exists(Constants.WORKING_DIR):
+        os.mkdir(Constants.WORKING_DIR)
+    logging.basicConfig(filename=Constants.LOG_PATH, level=logging.INFO, format="%(asctime)s : %(levelname)s : %(message)s")
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    logging.info("Starting membership list processing")
+
+def setupEmail() -> EmailAPI.EmailAccount:
+    logging.info("Setting up email account")
+    logging.info("Reading from email")
+    mailUsername = None
+    mailPassword = None
+    with open(Constants.EMAIL_CREDS, "r") as creds:
+        lines = creds.readlines()
+        mailUsername = lines[0].strip()
+        mailPassword = lines[1].strip()
+    if mailUsername is None or mailPassword is None:
+        logging.error("Couldn't read email credentials")
+        raise MembershipListProcessingException("Couldn't read email credentials")
+    emailAccount = EmailAPI.EmailAccount(mailUsername, mailPassword)
+    return emailAccount
+
+def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
+    if os.path.exists(Constants.DOWNLOAD_ZIP_PATH):
+            logging.info("Found old downloaded zip file, deleting")
+            os.remove(Constants.DOWNLOAD_ZIP_PATH)
+            
+    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.LEADERSHIP_EMAIL,
+                                                                Constants.EXPECTED_EMAIL_SUBJECT,  
+                                                                Constants.DOWNLOAD_ZIP_PATH,
+                                                                datetime.datetime.now() - datetime.timedelta(days=10), 
+                                                                expectedFileName=Constants.EXPECTED_LIST_ATTACHMENT_NAME)
+
     
-def main(args):
-    flags = parseArgs()
-    inputCSV = os.path.join(os.path.dirname(__file__), flags.filename)
-    print(inputCSV)
-    if not os.path.exists(inputCSV):
-        print("Input file DNE")
-        return
-    if not inputCSV.endswith("csv"):
-        print("File is not csv")
-        return
+    if os.path.exists(Constants.DOWNLOAD_LIST_PATH):
+        logging.info("Found old downloaded list, deleting")
+        os.remove(Constants.DOWNLOAD_LIST_PATH)
+
+    logging.info(f"Unzipping downloaded list to {Constants.DOWNLOAD_LIST_PATH}")
+    with zipfile.ZipFile(Constants.DOWNLOAD_ZIP_PATH) as downloadedZip:
+        downloadedZip.extract(Constants.DOWNLOAD_ZIP_LIST_MEMBER, path=Constants.WORKING_DIR)
+    return Constants.DOWNLOAD_LIST_PATH
+
+def readMembershipList(path: str) -> (list,list):
+    logging.info(f"Reading membership list from {path}")
+    if not os.path.exists(path):
+        logging.error(f"Input file DNE {path}")
+        raise MembershipListProcessingException(f"Input file DNE {path}")
+    if not path.endswith("csv"):
+        logging.error(f"File is not csv {path}")
+        raise MembershipListProcessingException(f"File is not csv {path}")
     
     # Save member counts to aggregate tracker
-    print("Reading input")
-    cols,rows = Utils.readCSV(inputCSV)
+    logging.info("Reading input")
+    cols,rows = Utils.readCSV(path)
+    return cols,rows
 
-    # Check for new columns
-    print("Checking for new columns")
-    foundNewCol = False
+def checkForNewCols(cols: list[str]):
+    logging.info("Checking for new columns")
+    newCols = []
     for c in cols:
-        if c not in Constants.COL_TO_ACTION_NETWORK:
-            print(c+"- Is not in the Action Network mapping")
-            foundNewCol = True
         if c not in Constants.COLS_TO_KEEP_FOR_ARCHIVE:
-            print(c+"- Is not in the Keep in Archive mapping")
-            foundNewCol = True
-    if foundNewCol:
-        print("Found new column not perfoming any operations")
-        return
+            logging.error(c+"- Is not in the Keep in Archive mapping")
+            newCols.append(c)
+    if len(newCols) > 0:
+        logging.error("Found new column not perfoming any operations")
+        raise MembershipListProcessingException(f"Found new columns in list {newCols}")
 
-    googleDriveApi = None
-    if flags.automateGoogleDrive:
-        googleDriveApi = GoogleDriveAPI.GoogleDriveAPI()
+def archiveAndObfuscate(cols: list[str], rows: list[str], googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
+    logging.info("Archiving and obfuscating")
+    # Convert file to archive obfuscate
+    colIndexs = []
+    newCols = []
+    for index in range(len(cols)):
+        if cols[index] in Constants.COLS_TO_KEEP_FOR_ARCHIVE and Constants.COLS_TO_KEEP_FOR_ARCHIVE[cols[index]]:
+            colIndexs.append(index)
+            newCols.append(cols[index])
+    # Filter rows
+    archiveRows = [[row[i].strip() for i in colIndexs] for row in rows]
 
-    # Copy to archive
-    if flags.archive:
-        print("Archiving and obfuscating")
-        # Convert file to archive obfuscate
-        colIndexs = []
-        newCols = []
-        for index in range(len(cols)):
-            if cols[index] in Constants.COLS_TO_KEEP_FOR_ARCHIVE and Constants.COLS_TO_KEEP_FOR_ARCHIVE[cols[index]]:
-                colIndexs.append(index)
-                newCols.append(cols[index])
-        # Filter rows
-        archiveRows = [[row[i].strip() for i in colIndexs] for row in rows]
+    if googleDriveApi is not None:
+        googleDriveApi.uploadArchiveRetentionData(cols=newCols, rows=archiveRows)
+    else:
+        archiveName = "members-"+Utils.Constants.TODAY_STR+".csv"
+        Utils.writeCSVFile(os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName), newCols, archiveRows)
 
+def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags, googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
+    logging.info("Starting Retention processing")
+    membersGoodStanding = 0
+    membersMember = 0
+    membersLapsed = 0
+    standingIndex = -1
+    for index in range(len(cols)):
+        if cols[index].strip().lower() == Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL:
+            standingIndex = index
+            break
+    if standingIndex == -1:
+        logging.error("Couldn't find membership standing column")
+        raise MembershipListProcessingException("Couldn't find membership standing column")
+    for row in rows:
+        if len(row) != len(cols):
+            logging.error(f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}")
+            raise MembershipListProcessingException(f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}")
+            
+        status = row[standingIndex].strip().lower()
+        if status == Utils.Constants.MEMBERSHIP_STATUS.GOOD_STANDING:
+            membersGoodStanding += 1
+        elif status == Utils.Constants.MEMBERSHIP_STATUS.MEMBER:
+            membersMember += 1
+        elif status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
+            membersLapsed += 1
+        else:
+            logging.error(f"Found unexpected membership status: {status}")
+            raise MembershipListProcessingException(f"Found unexpected membership status: {status}")
+    if flags.useLocalRetention and not flags.automateGoogleDrive:
+        Utils.appendCSVFile(Constants.RETENTION_DATA_FILE_PATH, (Utils.Constants.TODAY_STR, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))
+    elif flags.automateGoogleDrive:
+        googleDriveApi.uploadNewRetentionData(membersGoodStanding=membersGoodStanding, membersMember=membersMember, membersLapsed=membersLapsed)
+    else:
+        logging.error("Neither local retention nor automated google drive was specified. Not saving retention.")
+
+def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessing:bool):
+    # For uploads we will not convert to our old columns but instead use what national sends down
+    # For non-automated will keep the conversion, but our columns include spaces and capital letters
+    # The API connector will auto-lowercase
+    # We shouldn't lose any columns but we may have duplicates
+    logging.info("Uploading members to action network")
+    # A bit redundant to build this map but it will make building the person more convient later
+    # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
+    colToIndex = {}
+    for index in range(len(cols)):
+        colToIndex[cols[index]] = index
+    nonCustomFields = set([Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.CITY,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.STATE,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME,
+                        Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME])
+    peopleToPost = []
+    for row in rows:
+        customFields = {}
+        for col in cols:
+            if col in nonCustomFields:
+                continue
+            customFields[col] = row[colToIndex[col]]
+
+        peopleToPost.append(ActionNetworkAPI.Person(firstName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]],
+                                                    lastName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]],
+                                                    email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
+                                                    phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
+                                                    customFields=customFields,
+                                                    address=ActionNetworkAPI.PersonAddress(
+                                                        region=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE, Utils.Constants.MEMBERSHIP_LIST_COLS.STATE])],
+                                                        zip_code=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2])],
+                                                        city=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY, Utils.Constants.MEMBERSHIP_LIST_COLS.CITY])],
+                                                        address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])], 
+                                                                    row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
+                                                    )))
+    api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
+    api.postPeople(people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing)
+
+def main(args):
+    setup()
+    emailAccount = None
+    try:
+        flags = parseArgs()
+        inputFileName = flags.filename
+        if flags.filename == "EMAIL":
+            emailAccount = setupEmail()
+            inputFileName = dowloadMembershipListFromEmail(emailAccount)
+
+        cols,rows = readMembershipList(inputFileName)
+
+        checkForNewCols(cols)        
+
+        googleDriveApi = None
         if flags.automateGoogleDrive:
-            googleDriveApi.uploadArchiveRetentionData(cols=newCols, rows=archiveRows)
+            logging.info("Setting up Google Drive API")
+            googleDriveApi = GoogleDriveAPI.GoogleDriveAPI()
+ 
+        # Copy to archive
+        if flags.archive:
+            archiveAndObfuscate(cols,rows,googleDriveApi)
         else:
-            archiveName = "members-"+Utils.Constants.TODAY_STR+".csv"
-            Utils.writeCSVFile(os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName), newCols, archiveRows)
+            logging.info("Skipping Archiving")
 
-    if flags.retention:
-        print("Retention")
-        membersGoodStanding = 0
-        membersMember = 0
-        membersLapsed = 0
-        standingIndex = -1
-        for index in range(len(cols)):
-            if cols[index].strip().lower() == Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL:
-                standingIndex = index
-                break
-        if standingIndex == -1:
-            print("Couldn't find membership standing column")
-            return
-        for row in rows:
-            if len(row) != len(cols):
-                print("Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.")
-                print([x for x in zip(cols, row)])
-                return
-            status = row[standingIndex].strip().lower()
-            if status == Utils.Constants.MEMBERSHIP_STATUS.GOOD_STANDING:
-                membersGoodStanding += 1
-            elif status == Utils.Constants.MEMBERSHIP_STATUS.MEMBER:
-                membersMember += 1
-            elif status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
-                membersLapsed += 1
+        if flags.retention:
+            processRetentionData(cols,rows,flags,googleDriveApi)
+        else:
+            logging.info("Skipping Retention")
+
+        # Create csv for action network
+        if flags.actionNetwork:
+            if not flags.automateActionNetwork:
+                # Just directly copy over, we no longer convert to special custom fields since it could create stale custom fields
+                logging.info("Creating action network upload file")
+                Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, "action-network-"+Utils.Constants.TODAY_STR+".csv"), cols, rows)
             else:
-                print("Found unexpected value")
-                print(status)
-                return
-        if flags.useLocalRetention and not flags.automateGoogleDrive:
-            Utils.appendCSVFile(Constants.RETENTION_DATA_FILE_PATH, (Utils.Constants.TODAY_STR, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))
-        elif flags.automateGoogleDrive:
-            googleDriveApi.uploadNewRetentionData(membersGoodStanding=membersGoodStanding, membersMember=membersMember, membersLapsed=membersLapsed)
+                uploadToActionNetwork(cols,rows,flags.useANBackground)
         else:
-            print("Neither local retention nor automated google drive was specified. Not saving retention.")
-    else:
-        print("Skipping Retention")
+            logging.info("Skipping Action Network")
+    
+        if emailAccount is not None:
+            emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.TECH_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
 
-    # Create csv for action network
-    if flags.actionNetwork:
-        if not flags.automateActionNetwork:
-            print("Creating action network upload file")
-            # Convert cols to Action network
-            colIndexs = []
-            newCols = []
-            for index in range(len(cols)):
-                if cols[index] in Constants.COL_TO_ACTION_NETWORK and Constants.COL_TO_ACTION_NETWORK[cols[index]] != Constants.COL_DO_NOT_INCLUDE:
-                    colIndexs.append(index)
-                    newCols.append(Constants.COL_TO_ACTION_NETWORK[cols[index]])
-            # Filter rows
-            actionNetworkRows = [[row[i].strip() for i in colIndexs] for row in rows]
-            Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, "action-network-"+Utils.Constants.TODAY_STR+".csv"), newCols, actionNetworkRows)
-        else:
-            # For uploads we will not convert to our old columns but instead use what national sends down
-            # For non-automated will keep the conversion, but our columns include spaces and capital letters
-            # The API connector will auto-lowercase
-            # We shouldn't lose any columns but we may have duplicates
-            print("Uploading members to action network")
-            # A bit redundant to build this map but it will make building the person more convient later
-            # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
-            colToIndex = {}
-            for index in range(len(cols)):
-                colToIndex[cols[index]] = index
-            nonCustomFields = set([Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.CITY,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.STATE,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME,
-                                   Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME])
-            peopleToPost = []
-            for row in rows:
-                customFields = {}
-                for col in cols:
-                    if col in nonCustomFields:
-                        continue
-                    customFields[col] = row[colToIndex[col]]
-
-                peopleToPost.append(ActionNetworkAPI.Person(firstName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]],
-                                                            lastName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]],
-                                                            email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
-                                                            phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
-                                                            customFields=customFields,
-                                                            address=ActionNetworkAPI.PersonAddress(
-                                                                region=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE, Utils.Constants.MEMBERSHIP_LIST_COLS.STATE])],
-                                                                zip_code=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2])],
-                                                                city=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY, Utils.Constants.MEMBERSHIP_LIST_COLS.CITY])],
-                                                                address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])], 
-                                                                               row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
-                                                            )))
-            api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
-            api.postPeople(people=peopleToPost, useBackgroundProcessing=flags.useANBackground)
-    else:
-        print("Skipping Action Network")
+    except Exception as err:
+        logging.error("Failed to process membership list due to error")
+        logging.exception(err)
+        if emailAccount is not None:
+            emailAccount.markDownloadedEmailAsUnread()
+            emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.TECH_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
 
 if __name__ == "__main__":
     main(sys.argv)
+        
