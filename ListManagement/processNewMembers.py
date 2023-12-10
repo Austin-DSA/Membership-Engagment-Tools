@@ -383,9 +383,9 @@ def main():
             logging.info("Skipping Action Network")
 
         if emailAccount is not None:
-            emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
-            emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
-            emailAccount.sendMessage(Constants.TECH_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Successful Membership Upload", "Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Successful Membership Upload", "Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            emailAccount.sendMessage(Constants.TECH_EMAIL, "Successful Membership Upload", "Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
 
     except Exception as err:
         logging.error("Failed to process membership list due to error")
