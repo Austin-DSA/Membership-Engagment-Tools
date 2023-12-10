@@ -1,15 +1,14 @@
-
-import datetime
 import argparse
-import sys
+import datetime
+import logging
 import os
-import Utils
+import sys
 import typing
+import zipfile
+import Utils
 import ActionNetworkAPI
 import GoogleDriveAPI
-import logging
 import EmailAPI
-import zipfile
 
 class MembershipListProcessingException(Exception):
     pass
