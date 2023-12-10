@@ -210,18 +210,18 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
         logging.info("Found old downloaded list, deleting")
         os.remove(Constants.DOWNLOAD_LIST_PATH)
 
-    logging.info(f"Unzipping downloaded list to {Constants.DOWNLOAD_LIST_PATH}")
+    logging.info("Unzipping downloaded list to %s", Constants.DOWNLOAD_LIST_PATH)
     with zipfile.ZipFile(Constants.DOWNLOAD_ZIP_PATH) as downloadedZip:
         downloadedZip.extract(Constants.DOWNLOAD_ZIP_LIST_MEMBER, path=Constants.WORKING_DIR)
     return Constants.DOWNLOAD_LIST_PATH
 
 def readMembershipList(path: str) -> (list,list):
-    logging.info(f"Reading membership list from {path}")
+    logging.info("Reading membership list from %s", path)
     if not os.path.exists(path):
-        logging.error(f"Input file DNE {path}")
+        logging.error("Input file DNE %s", path)
         raise MembershipListProcessingException(f"Input file DNE {path}")
     if not path.endswith("csv"):
-        logging.error(f"File is not csv {path}")
+        logging.error("File is not csv %s", path)
         raise MembershipListProcessingException(f"File is not csv {path}")
 
     # Save member counts to aggregate tracker
@@ -234,7 +234,7 @@ def checkForNewCols(cols: list[str]):
     newCols = []
     for c in cols:
         if c not in Constants.COLS_TO_KEEP_FOR_ARCHIVE:
-            logging.error(c+"- Is not in the Keep in Archive mapping")
+            logging.error("%s- Is not in the Keep in Archive mapping", c)
             newCols.append(c)
     if len(newCols) > 0:
         logging.error("Found new column not perfoming any operations")
@@ -273,7 +273,7 @@ def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags,
         raise MembershipListProcessingException("Couldn't find membership standing column")
     for row in rows:
         if len(row) != len(cols):
-            logging.error(f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}")
+            logging.error("Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.%s", [x for x in zip(cols, row)])
             raise MembershipListProcessingException(f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}")
 
         status = row[standingIndex].strip().lower()
@@ -284,7 +284,7 @@ def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags,
         elif status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
             membersLapsed += 1
         else:
-            logging.error(f"Found unexpected membership status: {status}")
+            logging.error("Found unexpected membership status: %s", status)
             raise MembershipListProcessingException(f"Found unexpected membership status: {status}")
     if flags.useLocalRetention and not flags.automateGoogleDrive:
         Utils.appendCSVFile(Constants.RETENTION_DATA_FILE_PATH, (Utils.Constants.TODAY_STR, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))
