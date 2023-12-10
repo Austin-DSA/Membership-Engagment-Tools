@@ -13,8 +13,7 @@ Features include:
 ## Prerequisites
 
 - Python 3.x installed
-- Additional Python packages: `argparse`, `datetime`, `logging`, `os`, `sys`, `typing`, `zipfile`
-- Custom Python modules: `Utils`, `ActionNetworkAPI`, `GoogleDriveAPI`, `EmailAPI`
+- Available Python packages: `argparse`, `datetime`, `logging`, `os`, `sys`, `typing`, `zipfile`
 - Credentials and API keys configured as required by the script (refer to `Constants` class within the script for configuration files and paths)
   1. You will need to add an Action Network API key into `actionNetworkAPIKey.txt`. A key can be found in Action Network, Details -> API & Sync.
   3. You will need to make a `client_secrets.json` in the same folder as the scripts. Details for that can be found here [https://pythonhosted.org/PyDrive/quickstart.html#authentication].
