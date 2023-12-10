@@ -29,7 +29,7 @@ class Constants:
     LEADERSHIP_EMAIL = "leadership@austindsa.org"
     MEMBERSHIP_EMAIL = "membership@austindsa.org"
     TECH_EMAIL = "tech@austindsa.org"
-    
+
     LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.txt"
     LOG_PATH = os.path.join(WORKING_DIR,LOG_NAME)
 
@@ -37,9 +37,9 @@ class Constants:
 
     EXPECTED_LIST_ATTACHMENT_NAME = "austin_membership_list.zip"
     ZIP_CODE_COL = "Zip_Code"
-    
+
     COL_DO_NOT_INCLUDE = "N/A"
-    # Only add but can map to same value 
+    # Only add but can map to same value
     COLS_TO_KEEP_FOR_ARCHIVE = {
         "prefix"                       : False,
         "mailing_pref"                 : False,
@@ -113,7 +113,7 @@ class CommmandFlags:
         self.automateGoogleDrive = automateGoogleDrive
         self.useLocalRetention = useLocalRetention
         self.useANBackground = useANBackground
-    
+
 def parseArgs():
     # I am using hardcoded strings here since you can't subscript the parsed args by the argument name
     # NOW WHY YOU CAN"T IS BEYONd ME and if you want to yell at python for me I would kiss you
@@ -121,41 +121,41 @@ def parseArgs():
     # Especially since the error from an incorrect string should stop the program before starting
     parser = argparse.ArgumentParser(description="Process the member list from National DSA")
     parser.add_argument(CommmandFlags.FILENAME,
-                        help="File name of the membership list")    
-    parser.add_argument(CommmandFlags.AUTOMATE, 
-                        dest="automate", 
-                        default=False, 
-                        action="store_true", 
+                        help="File name of the membership list")
+    parser.add_argument(CommmandFlags.AUTOMATE,
+                        dest="automate",
+                        default=False,
+                        action="store_true",
                         help = "Automate both Action network and Google Drive. If false will use local file for retention data.")
-    parser.add_argument(CommmandFlags.AUTOMATE_AN, 
-                        dest="automate_an", 
-                        default=False, 
-                        action="store_true", 
+    parser.add_argument(CommmandFlags.AUTOMATE_AN,
+                        dest="automate_an",
+                        default=False,
+                        action="store_true",
                         help = "Automate uploading to Action network")
-    parser.add_argument(CommmandFlags.AUTOMATE_GDRIVE,       
-                        dest="automate_gdrive", 
-                        default=False, 
-                        action="store_true",  
+    parser.add_argument(CommmandFlags.AUTOMATE_GDRIVE,
+                        dest="automate_gdrive",
+                        default=False,
+                        action="store_true",
                         help = "Automate uploading retention data to Austin DSA Google drive (will download retention data from google drive). Overrides --local-retention")
-    parser.add_argument(CommmandFlags.DO_NOT_ARCHIVE,        
-                        dest="do_not_archive", 
-                        default=False, 
-                        action="store_true",  
+    parser.add_argument(CommmandFlags.DO_NOT_ARCHIVE,
+                        dest="do_not_archive",
+                        default=False,
+                        action="store_true",
                         help = "Skip archiving step, will skip uploading archive to google drive but not retention")
-    parser.add_argument(CommmandFlags.DO_NOT_RETENTION,      
-                        dest="do_not_retention", 
-                        default=False, 
-                        action="store_true", 
+    parser.add_argument(CommmandFlags.DO_NOT_RETENTION,
+                        dest="do_not_retention",
+                        default=False,
+                        action="store_true",
                         help = "Skip retention step, will skip any automated google drive steps")
-    parser.add_argument(CommmandFlags.DO_NOT_ACTION_NETWORK, 
-                        dest="do_not_action_network", 
-                        default=False, 
-                        action="store_true", 
+    parser.add_argument(CommmandFlags.DO_NOT_ACTION_NETWORK,
+                        dest="do_not_action_network",
+                        default=False,
+                        action="store_true",
                         help="Skip Action Network steps. Will skip upload if automated.")
-    parser.add_argument(CommmandFlags.USE_LOCAL_RETENTION,   
-                        dest="use_local_retention", 
-                        default=True, 
-                        action="store_true", 
+    parser.add_argument(CommmandFlags.USE_LOCAL_RETENTION,
+                        dest="use_local_retention",
+                        default=True,
+                        action="store_true",
                         help="If automating will use local retention file instead of downloading. Fails if local files DNE.")
     parser.add_argument(CommmandFlags.BACKGROUND,
                         dest="background",
@@ -164,9 +164,9 @@ def parseArgs():
                         help="If supplied then when uploading to AN will include the background tag. Theoretically should be faster however testing hasn't been clear."
                         )
     args = parser.parse_args()
-    return CommmandFlags(args.filename, 
-                         doNotArchive = args.do_not_archive, 
-                         doNotRetention = args.do_not_retention, 
+    return CommmandFlags(args.filename,
+                         doNotArchive = args.do_not_archive,
+                         doNotRetention = args.do_not_retention,
                          doNotActionNetwork = args.do_not_action_network,
                          automateActionNetwork = args.automate or args.automate_an,
                          automateGoogleDrive = args.automate or args.automate_gdrive,
@@ -199,14 +199,14 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
     if os.path.exists(Constants.DOWNLOAD_ZIP_PATH):
             logging.info("Found old downloaded zip file, deleting")
             os.remove(Constants.DOWNLOAD_ZIP_PATH)
-            
+
     emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.MEMBERSHIP_EMAIL,
-                                                                Constants.EXPECTED_EMAIL_SUBJECT,  
+                                                                Constants.EXPECTED_EMAIL_SUBJECT,
                                                                 Constants.DOWNLOAD_ZIP_PATH,
-                                                                datetime.datetime.now() - datetime.timedelta(days=10), 
+                                                                datetime.datetime.now() - datetime.timedelta(days=10),
                                                                 expectedFileName=Constants.EXPECTED_LIST_ATTACHMENT_NAME)
 
-    
+
     if os.path.exists(Constants.DOWNLOAD_LIST_PATH):
         logging.info("Found old downloaded list, deleting")
         os.remove(Constants.DOWNLOAD_LIST_PATH)
@@ -224,7 +224,7 @@ def readMembershipList(path: str) -> (list,list):
     if not path.endswith("csv"):
         logging.error(f"File is not csv {path}")
         raise MembershipListProcessingException(f"File is not csv {path}")
-    
+
     # Save member counts to aggregate tracker
     logging.info("Reading input")
     cols,rows = Utils.readCSV(path)
@@ -276,7 +276,7 @@ def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags,
         if len(row) != len(cols):
             logging.error(f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}")
             raise MembershipListProcessingException(f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}")
-            
+
         status = row[standingIndex].strip().lower()
         if status == Utils.Constants.MEMBERSHIP_STATUS.GOOD_STANDING:
             membersGoodStanding += 1
@@ -336,7 +336,7 @@ def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessi
                                                         region=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE, Utils.Constants.MEMBERSHIP_LIST_COLS.STATE])],
                                                         zip_code=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2])],
                                                         city=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY, Utils.Constants.MEMBERSHIP_LIST_COLS.CITY])],
-                                                        address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])], 
+                                                        address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])],
                                                                     row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
                                                     )))
     api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
@@ -354,13 +354,13 @@ def main():
 
         cols,rows = readMembershipList(inputFileName)
 
-        checkForNewCols(cols)        
+        checkForNewCols(cols)
 
         googleDriveApi = None
         if flags.automateGoogleDrive:
             logging.info("Setting up Google Drive API")
             googleDriveApi = GoogleDriveAPI.GoogleDriveAPI()
- 
+
         # Copy to archive
         if flags.archive:
             archiveAndObfuscate(cols,rows,googleDriveApi)
@@ -382,7 +382,7 @@ def main():
                 uploadToActionNetwork(cols,rows,flags.useANBackground)
         else:
             logging.info("Skipping Action Network")
-    
+
         if emailAccount is not None:
             emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
             emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Successful Membership Upload", f"Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
@@ -398,5 +398,4 @@ def main():
             emailAccount.sendMessage(Constants.TECH_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
 
 if __name__ == "__main__":
-    main(sys.argv)
-        
+    main()
