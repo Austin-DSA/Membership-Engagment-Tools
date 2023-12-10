@@ -185,7 +185,7 @@ def setupEmail() -> EmailAPI.EmailAccount:
     logging.info("Reading from email")
     mailUsername = None
     mailPassword = None
-    with open(Constants.EMAIL_CREDS, "r") as creds:
+    with open(Constants.EMAIL_CREDS, "r", encoding="UTF-8") as creds:
         lines = creds.readlines()
         mailUsername = lines[0].strip()
         mailPassword = lines[1].strip()
@@ -197,8 +197,8 @@ def setupEmail() -> EmailAPI.EmailAccount:
 
 def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
     if os.path.exists(Constants.DOWNLOAD_ZIP_PATH):
-            logging.info("Found old downloaded zip file, deleting")
-            os.remove(Constants.DOWNLOAD_ZIP_PATH)
+        logging.info("Found old downloaded zip file, deleting")
+        os.remove(Constants.DOWNLOAD_ZIP_PATH)
 
     emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.MEMBERSHIP_EMAIL,
                                                                 Constants.EXPECTED_EMAIL_SUBJECT,
