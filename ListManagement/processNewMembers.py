@@ -25,9 +25,11 @@ class Constants:
     EMAIL_CREDS = os.path.join(os.path.dirname(__file__),"email.txt")
     EXPECTED_EMAIL_SUBJECT = "Austin Membership List"
 
-    LEADERSHIP_EMAIL = "leadership@austindsa.org"
-    MEMBERSHIP_EMAIL = "membership@austindsa.org"
-    TECH_EMAIL = "tech@austindsa.org"
+    NOTIFICATION_EMAILS = {
+        "LEADERSHIP": "leadership@austindsa.org",
+        "MEMBERSHIP": "membership@austindsa.org",
+        "TECH": "tech@austindsa.org"
+    }
 
     LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.txt"
     LOG_PATH = os.path.join(WORKING_DIR,LOG_NAME)
@@ -199,7 +201,7 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
         logging.info("Found old downloaded zip file, deleting")
         os.remove(Constants.DOWNLOAD_ZIP_PATH)
 
-    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.MEMBERSHIP_EMAIL,
+    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.NOTIFICATION_EMAILS["MEMBERSHIP"],
                                                                 Constants.EXPECTED_EMAIL_SUBJECT,
                                                                 Constants.DOWNLOAD_ZIP_PATH,
                                                                 datetime.datetime.now() - datetime.timedelta(days=10),
@@ -383,18 +385,27 @@ def main():
             logging.info("Skipping Action Network")
 
         if emailAccount is not None:
-            emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Successful Membership Upload", "Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
-            emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Successful Membership Upload", "Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
-            emailAccount.sendMessage(Constants.TECH_EMAIL, "Successful Membership Upload", "Uploaded Membership List",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
+                emailAccount.sendMessage(
+                    emailAddress,
+                    "Successful Membership Upload",
+                    "Uploaded Membership List",
+                    [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+                )
 
     except Exception as err:
         logging.error("Failed to process membership list due to error")
         logging.exception(err)
         if emailAccount is not None:
             emailAccount.markDownloadedEmailAsUnread()
-            emailAccount.sendMessage(Constants.LEADERSHIP_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
-            emailAccount.sendMessage(Constants.MEMBERSHIP_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
-            emailAccount.sendMessage(Constants.TECH_EMAIL, "Failed Membership Upload", f"Failed to upload membership script due to:\n {err}",[EmailAPI.Attachement(Constants.LOG_PATH,Constants.LOG_NAME)])
+            for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
+                emailAccount.sendMessage(
+                    emailAddress,
+                    "Failed Membership Upload",
+                    f"Failed to upload membership script due to:\n {err}",
+                    [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+                )
 
 if __name__ == "__main__":
     main()
+ 
