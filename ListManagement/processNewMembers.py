@@ -342,7 +342,7 @@ def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessi
     api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
     api.postPeople(people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing)
 
-def main(args):
+def main():
     setup()
     emailAccount = None
     try:
