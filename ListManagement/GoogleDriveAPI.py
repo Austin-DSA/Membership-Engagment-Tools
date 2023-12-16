@@ -19,15 +19,11 @@ class Constants:
         JSON_KEY_FILE = os.path.join(os.path.dirname(__file__),"googleDriveServiceAccountKey.json")
     
     class Paths:
-        GOOGLE_AUTH_YAML = "googleAuthSettings.yaml"
         RETENTION_DATA_FILE = "adsa-retention-data.csv"
     
     class IDs:
         RETENTION_ARCHIVE_FOLDER = "1iD0WtMeP9DvBA1HULJbWPRcLWKPddve-"
         RETENTION_DATA_FILE = "1ORnCuXxm1eFXVtWfeEn9fsjY6Nd3N3Ld"
-
-CLIENT_SECRET = "./client_secret.json"
-TOKEN_FILE = "./token.json"
 
 class GoogleDriveAPI:
     def __init__(self) -> None:

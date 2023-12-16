@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 import datetime
 import logging
 import os
@@ -93,6 +94,10 @@ class Constants:
         "accommodations"               : True,
         "race"                         : True
     }
+
+@dataclasses.dataclass
+class AutomaticUploadConfiguration:
+
 
 class CommmandFlags:
     FILENAME = "filename"
