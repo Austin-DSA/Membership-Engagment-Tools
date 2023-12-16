@@ -247,10 +247,10 @@ def archiveAndObfuscate(cols: list[str], rows: list[str], googleDriveApi: typing
     # Convert file to archive obfuscate
     colIndexs = []
     newCols = []
-    for index in enumerate(cols):
-        if cols[index] in Constants.COLS_TO_KEEP_FOR_ARCHIVE and Constants.COLS_TO_KEEP_FOR_ARCHIVE[cols[index]]:
+    for index,val in enumerate(cols):
+        if val in Constants.COLS_TO_KEEP_FOR_ARCHIVE and Constants.COLS_TO_KEEP_FOR_ARCHIVE[val]:
             colIndexs.append(index)
-            newCols.append(cols[index])
+            newCols.append(val)
     # Filter rows
     archiveRows = [[row[i].strip() for i in colIndexs] for row in rows]
 
@@ -266,8 +266,8 @@ def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags,
     membersMember = 0
     membersLapsed = 0
     standingIndex = -1
-    for index in enumerate(cols):
-        if cols[index].strip().lower() == Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL:
+    for index,val in enumerate(cols):
+        if val.strip().lower() == Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL:
             standingIndex = index
             break
     if standingIndex == -1:
@@ -304,8 +304,8 @@ def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessi
     # A bit redundant to build this map but it will make building the person more convient later
     # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
     colToIndex = {}
-    for index in enumerate(cols):
-        colToIndex[cols[index]] = index
+    for index,val in enumerate(cols):
+        colToIndex[val] = index
     nonCustomFields = set([Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL,
                         Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE,
                         Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1,
