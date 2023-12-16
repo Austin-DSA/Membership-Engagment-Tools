@@ -31,6 +31,8 @@ class Constants:
         "TECH": "tech@austindsa.org"
     }
 
+    MEMBERSHIP_LIST_DOWNLOAD_EMAIL = "no-reply@actionkit.com"
+
     LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.txt"
     LOG_PATH = os.path.join(WORKING_DIR,LOG_NAME)
 
@@ -201,7 +203,7 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
         logging.info("Found old downloaded zip file, deleting")
         os.remove(Constants.DOWNLOAD_ZIP_PATH)
 
-    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.NOTIFICATION_EMAILS["MEMBERSHIP"],
+    emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(Constants.MEMBERSHIP_LIST_DOWNLOAD_EMAIL,
                                                                 Constants.EXPECTED_EMAIL_SUBJECT,
                                                                 Constants.DOWNLOAD_ZIP_PATH,
                                                                 datetime.datetime.now() - datetime.timedelta(days=10),
