@@ -342,7 +342,7 @@ def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessi
                                                         address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])],
                                                                     row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
                                                     )))
-    api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile("actionNetworkAPIKey.txt"))
+    api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(os.path.join(os.path.dirname(__file__),"actionNetworkAPIKey.txt")))
     api.postPeople(people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing)
 
 def main():
