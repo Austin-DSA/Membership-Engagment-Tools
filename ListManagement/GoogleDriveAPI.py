@@ -1,3 +1,12 @@
+"""
+Provides a class GoogleDriveAPI for interacting with the Google Drive API to upload and manage files.
+
+Note: This module requires the Google Drive API credentials to be set up correctly and saved in googleDriveServiceAccountKey.json.
+
+For more information, refer to the Google Drive API documentation: [Google Drive API Documentation](https://developers.google.com/drive)
+"""
+
+
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from oauth2client.service_account import ServiceAccountCredentials
