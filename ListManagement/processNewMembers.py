@@ -360,19 +360,41 @@ def uploadToActionNetwork(cols: list[str], rows: list[str], useBackgroundProcess
                 continue
             customFields[col] = row[colToIndex[col]]
 
-        peopleToPost.append(ActionNetworkAPI.Person(firstName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]],
-                                                    lastName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]],
-                                                    email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
-                                                    phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
-                                                    customFields=customFields,
-                                                    address=ActionNetworkAPI.PersonAddress(
-                                                        region=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE, Utils.Constants.MEMBERSHIP_LIST_COLS.STATE])],
-                                                        zip_code=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2])],
-                                                        city=row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY, Utils.Constants.MEMBERSHIP_LIST_COLS.CITY])],
-                                                        address_lines=[row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1])],
-                                                                    row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
-                                                    )))
-    api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(os.path.join(os.path.dirname(__file__),"actionNetworkAPIKey.txt")))
+        peopleToPost.append(
+            ActionNetworkAPI.Person(
+                firstName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]],
+                lastName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]],
+                email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
+                phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
+                customFields=customFields,
+                address=ActionNetworkAPI.PersonAddress(
+                    region=row[
+                        Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE, Utils.Constants.MEMBERSHIP_LIST_COLS.STATE])
+                    ],
+                    zip_code=row[
+                        Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL, Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2])
+                    ],
+                    city=row[
+                        Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY, Utils.Constants.MEMBERSHIP_LIST_COLS.CITY])
+                    ],
+                    address_lines=[
+                        row[
+                            Utils.getValueWithAnyName(
+                                colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1]
+                            )
+                        ],
+                        row[
+                            Utils.getValueWithAnyName(
+                                colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2]
+                            )
+                        ],
+                    ],
+                ),
+            )
+        )
+    api = ActionNetworkAPI.ActionNetworkAPI(
+        apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(os.path.join(os.path.dirname(__file__), "actionNetworkAPIKey.txt"))
+    )
     api.postPeople(people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing)
 
 
