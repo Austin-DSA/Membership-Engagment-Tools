@@ -88,7 +88,7 @@ class Person:
              outKey = k.lower()
              if outKey in restrictedCols:
                 raise InvalidPerson(f"Custom field {k} conflicts with restricted API keys")
-             if type(v) != str:
+            if not isinstance(v, str):
                 raise InvalidPerson(f"Custom field {k} of value {str(v)} is not of string")
              personDict[Constants.CUSTOM_FIELDS][k] = v
         return personDict
@@ -122,7 +122,7 @@ class ActionNetworkAPI:
          # https://actionnetwork.org/docs/v2/post-people/
          responseDict =  response.json()
          endpoints = responseDict[Constants.API_ENDPOINTS_LIST]
-         if type(endpoints) != dict:
+        if not isinstance(endpoints, dict):
             raise InvalidAPIResponse(f"Endpoints list in response ({Constants.API_ENDPOINTS_LIST}) was not a dictionary. Instead it was {str(endpoints)}")
          
          # Extract APIs we want
