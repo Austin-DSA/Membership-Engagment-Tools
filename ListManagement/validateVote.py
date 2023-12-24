@@ -3,14 +3,17 @@ import Utils
 import sys
 import dataclasses
 
+
 class Constants:
     class VOTE_COLS:
-        EMAIL = "email" # Will probably need updating
+        EMAIL = "email"  # Will probably need updating
         VOTE = "vote"
+
     class VOTE_TYPES:
         YES = "Yes"
         NO = "No"
         ABSTAIN = "Abstain"
+
 
 class CommmandFlags:
     VOTE_LIST = "-v"
@@ -27,7 +30,8 @@ class CommmandFlags:
         self.voteListPath = voteListPath
         self.mebershipListPath = membershipListPath
         self.outputPath = outputPath
-    
+
+
 def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument(CommmandFlags.VOTE_LIST, CommmandFlags.VOTE_LIST_LONG, required=True)
@@ -35,6 +39,7 @@ def parseArgs():
     parser.add_argument(CommmandFlags.OUTPUT, CommmandFlags.OUTPUT_LONG, required=True)
     parsedArgs = parser.parse_args()
     return CommmandFlags(voteListPath=parsedArgs.vote_list, membershipListPath=parsedArgs.membership_list, outputPath=parsedArgs.output)
+
 
 @dataclasses.dataclass
 class Vote:
@@ -45,6 +50,7 @@ class Vote:
 
     def toRow(self):
         return [self.email, self.vote, self.status]
+
 
 def main(args):
     flags = parseArgs()
@@ -93,15 +99,12 @@ def main(args):
         if not vote.found:
             vote.status = "Not in list"
         outputRows.append(vote.toRow())
-    
+
     Utils.writeCSVFile(flags.outputPath, outputCols, outputRows)
-    print("Yes: "+str(numYes))
-    print("No: "+str(numNo))
-    print("Abstain: "+str(numAbstain))
-    print("Total: "+str(numYes+numNo+numAbstain))
-
-    
-
+    print("Yes: " + str(numYes))
+    print("No: " + str(numNo))
+    print("Abstain: " + str(numAbstain))
+    print("Total: " + str(numYes + numNo + numAbstain))
 
 
 if __name__ == "__main__":
