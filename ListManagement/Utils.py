@@ -104,7 +104,7 @@ def getIndexesForColumns(fullCols, wantedCols):
     # ensure we got all the cols we wanted
     for col in wantedCols:
         if col not in colToIndexMap:
-            raise UtilsException("Error: Couldn't find column "+str(col)+" in cols "+str(fullCols))
+            raise UtilsException(f"Error: Couldn't find column {str(col)} in cols {str(fullCols)}")
     return colToIndexMap
 
 

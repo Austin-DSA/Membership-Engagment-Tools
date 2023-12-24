@@ -39,7 +39,7 @@ class GoogleDriveAPI:
     # This can create multiple files of the same name in the retention archive
     # However determining if we should upload based on if another file exists makes us choose which version is valid at this point
     # Is better to let anyone looking at the archive directory to figure it out themselves based on context 
-    def uploadArchiveRetentionData(self, cols, rows, name="members-"+Utils.Constants.TODAY_STR+".csv") -> None:
+    def uploadArchiveRetentionData(self, cols, rows, name=f"members-{Utils.Constants.TODAY_STR}.csv") -> None:
         archiveFile = self.drive.CreateFile({Constants.Metadata.TITLE : name,
                                              Constants.Metadata.MIME_TYPE : Constants.Metadata.MIME_TYE_CSV, 
                                              Constants.Metadata.PARENTS : [{Constants.Metadata.ID: Constants.IDs.RETENTION_ARCHIVE_FOLDER}]})
@@ -51,7 +51,7 @@ class GoogleDriveAPI:
     def uploadNewRetentionData(self, membersGoodStanding: int, membersMember: int, membersLapsed:int , date=Utils.Constants.TODAY_STR):
         retentionFile = self.drive.CreateFile({Constants.Metadata.ID : Constants.IDs.RETENTION_DATA_FILE})
         if retentionFile[Constants.Metadata.TITLE] != Constants.Paths.RETENTION_DATA_FILE:
-            logging.error("Recieved unexpected file for retention "+str(retentionFile))
+            logging.error(f"Recieved unexpected file for retention {str(retentionFile)}")
             return
         
         newContent = Utils.appendCSVString(retentionFile.GetContentString(), (date, membersGoodStanding, membersMember, membersLapsed, membersGoodStanding+membersMember+membersLapsed))

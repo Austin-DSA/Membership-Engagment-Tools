@@ -259,7 +259,7 @@ def archiveAndObfuscate(cols: list[str], rows: list[str], googleDriveApi: typing
     if googleDriveApi is not None:
         googleDriveApi.uploadArchiveRetentionData(cols=newCols, rows=archiveRows)
     else:
-        archiveName = "members-"+Utils.Constants.TODAY_STR+".csv"
+        archiveName = f"members-{Utils.Constants.TODAY_STR}.csv"
         Utils.writeCSVFile(os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName), newCols, archiveRows)
 
 def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags, googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
@@ -380,7 +380,7 @@ def main():
             if not flags.automateActionNetwork:
                 # Just directly copy over, we no longer convert to special custom fields since it could create stale custom fields
                 logging.info("Creating action network upload file")
-                Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, "action-network-"+Utils.Constants.TODAY_STR+".csv"), cols, rows)
+                Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, f"action-network-{Utils.Constants.TODAY_STR}.csv"), cols, rows)
             else:
                 uploadToActionNetwork(cols,rows,flags.useANBackground)
         else:

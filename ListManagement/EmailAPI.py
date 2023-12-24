@@ -46,7 +46,7 @@ class EmailAccount:
         resp, messages = self.mail.search(None, f'(FROM "{address}")', f'SUBJECT "{subjectContaining}"', 'UNSEEN')
         emails = []
         if resp != Constants.Responses.OK:
-            raise EmailApiException("Got not OK response when looking for unread emails : "+str(resp))
+            raise EmailApiException(f"Got not OK response when looking for unread emails : {str(resp)}")
         for msg in messages[0].split():
             try: 
                 _, data = self.mail.fetch(msg, '(RFC822)')

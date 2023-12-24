@@ -87,9 +87,9 @@ class Person:
         for k,v in self.customFields.items():
              outKey = k.lower()
              if outKey in restrictedCols:
-                  raise InvalidPerson("Custom field "+k+" conflicts with restricted API keys")
+                raise InvalidPerson(f"Custom field {k} conflicts with restricted API keys")
              if type(v) != str:
-                  raise InvalidPerson("Custom field "+k+" of value "+str(v)+" is not of string")
+                raise InvalidPerson(f"Custom field {k} of value {str(v)} is not of string")
              personDict[Constants.CUSTOM_FIELDS][k] = v
         return personDict
 
@@ -108,10 +108,10 @@ class ActionNetworkAPI:
     @staticmethod
     def _extractEndpoint(endpointDict: dict, api: str) -> str:
          if api not in endpointDict:
-              raise InvalidAPIResponse("Api ("+api+") was not in endpoint list which is "+str(endpointDict))
+            raise InvalidAPIResponse(f"Api ({api}) was not in endpoint list which is {str(endpointDict)}")
          endpointObj = endpointDict[api]
          if Constants.API_ENDPOINT not in endpointObj:
-              raise InvalidAPIResponse("Endpoint("+Constants.API_ENDPOINT+") not found for API("+api+") in endpoint object "+str(endpointObj))
+            raise InvalidAPIResponse(f"Endpoint({Constants.API_ENDPOINT}) not found for API({api}) in endpoint object {str(endpointObj)}")
          return endpointObj[Constants.API_ENDPOINT]
          
     def _initializeEndpoints(self) -> None:
@@ -123,7 +123,7 @@ class ActionNetworkAPI:
          responseDict =  response.json()
          endpoints = responseDict[Constants.API_ENDPOINTS_LIST]
          if type(endpoints) != dict:
-              raise InvalidAPIResponse("Endpoints list in response ("+Constants.API_ENDPOINTS_LIST+") was not a dictionary. Instead it was "+str(endpoints))
+            raise InvalidAPIResponse(f"Endpoints list in response ({Constants.API_ENDPOINTS_LIST}) was not a dictionary. Instead it was {str(endpoints)}")
          
          # Extract APIs we want
          self.personSignupHelper = ActionNetworkAPI._extractEndpoint(endpoints, Constants.API_PERSON_SIGNUP_HELPER_KEY)
