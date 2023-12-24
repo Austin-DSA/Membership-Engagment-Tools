@@ -1,3 +1,18 @@
+"""
+Provides a Python interface for interacting with the Action Network API.
+It includes classes and functions for performing various actions such as creating a person, adding tags, and updating custom fields.
+
+Classes:
+- Constants: Contains constants used in the module.
+- PersonAddress: Represents a person's address.
+- Person: Represents a person's personal information.
+
+Note: Make sure to set the API key in the `HEADER_API_KEY` constant before making API requests.
+
+For more information, refer to the Action Network API documentation: [link to documentation]
+"""
+
+
 import requests
 import typing
 import dataclasses
@@ -7,6 +22,7 @@ import logging
 
 
 class Constants:
+    """ Contains constants used in the ActionNetworkAPI module."""
     # URLS
     API_ENTRY = "https://actionnetwork.org/api/v2/"
     BACKGROUN_PROCESSING_QUERY_PARAM = "background_request"
@@ -48,7 +64,22 @@ class Constants:
 
 @dataclasses.dataclass
 class PersonAddress:
-    # Assuming TX becuase chapter is in Austin,TX
+    """
+    Represents a person's address data.
+
+    Attributes:
+        zip_code: The zip code of the address.
+        address_lines: A list of strings representing the lines of the address.
+        country: The country of the address. Default is "US".
+        region: The region of the address. Default is "TX".
+        city: The city of the address. Default is "Austin".
+    
+    Methods:
+        toDict(): Converts the PersonAddress object to a dictionary.
+
+    Note: The assumption is made that the chapter is located in Austin, TX.
+    """
+
     zip_code: str
     address_lines: typing.List[str]
     country: str = "US"
@@ -65,9 +96,25 @@ class PersonAddress:
         }
 
 
-# Forces customFields to lower case
 @dataclasses.dataclass
 class Person:
+    """
+    Represents a person's personal information.
+
+    Attributes:
+        firstName (str): The first name of the person.
+        lastName (str): The last name of the person.
+        email (str): The email address of the person.
+        phone (str): The phone number of the person.
+        address (PersonAddress): The address of the person.
+        customFields (dict[str, str]): Custom fields associated with the person.
+
+    Methods:
+        toSignupHelperDict(): Converts the Person object to a dictionary in the format required by the Action Network API signup helper, with lowercase keys.
+
+    Raises:
+        InvalidPerson: If a custom field conflicts with restricted API keys or if a custom field value is not a string.
+    """
     firstName: str
     lastName: str
     email: str
@@ -77,7 +124,16 @@ class Person:
 
     # The structre here is different from the full spec, in the sign up helper it is flattened
     # https://actionnetwork.org/docs/v2/person_signup_helper
-    def toSignupHelperDict(self):
+    def toSignupHelperDict(self) -> dict:
+        """
+        Converts the Person object to a dictionary in the format required by the Action Network API signup helper, with lowercase keys.
+
+        Returns:
+            dict: A dictionary representing the Person object in the format required by the Action Network API signup helper.
+
+        Raises:
+            InvalidPerson: If a custom field conflicts with restricted API keys or if a custom field value is not a string.
+        """
         personDict = {
             Constants.FIRST_NAME: self.firstName,
             Constants.LAST_NAME: self.lastName,
@@ -98,20 +154,42 @@ class Person:
 
 
 class InvalidPerson(Exception):
+    """Exception raised when an invalid person object is encountered."""
     pass
 
 
 class InvalidAPIResponse(Exception):
+    """Exception raised when an invalid API response is encountered."""
     pass
 
 
 class ActionNetworkAPI:
-    def __init__(self, apiKey) -> None:
+    """Represents the Action Network API to allow uploading of member data."""
+    def __init__(self, apiKey: str):
+        """
+        Initializes the ActionNetworkAPI object with the provided API key.
+
+        Parameters:
+            apiKey (str): The API key used for authentication.
+        """
         self.apiKey = apiKey
         self._initializeEndpoints()
 
     @staticmethod
     def _extractEndpoint(endpointDict: dict, api: str) -> str:
+        """
+        Extracts the endpoint URL for a given API from the endpoint dictionary.
+
+        Parameters:
+            endpointDict (dict): The dictionary containing the API endpoints.
+            api (str): The name of the API.
+
+        Returns:
+            str: The endpoint URL for the given API.
+
+        Raises:
+            InvalidAPIResponse: If the API or endpoint is not found in the endpoint dictionary.
+        """
         if api not in endpointDict:
             raise InvalidAPIResponse(f"Api ({api}) was not in endpoint list which is {str(endpointDict)}")
         endpointObj = endpointDict[api]
@@ -119,11 +197,17 @@ class ActionNetworkAPI:
             raise InvalidAPIResponse(f"Endpoint({Constants.API_ENDPOINT}) not found for API({api}) in endpoint object {str(endpointObj)}")
         return endpointObj[Constants.API_ENDPOINT]
 
-    def _initializeEndpoints(self) -> None:
+    def _initializeEndpoints(self):
+        """
+        Initializes the API endpoints by making a request to the Action Network API.
+
+        Raises:
+            InvalidAPIResponse: If the API response is not valid.
+        """
         # Get available APIs
         response = requests.get(Constants.API_ENTRY, headers=self._headersForRequest())
         response.raise_for_status()
-        # Action Network API shoul return a JSON response for endpoints
+        # Action Network API should return a JSON response for endpoints
         # https://actionnetwork.org/docs/v2/post-people/
         responseDict = response.json()
         endpoints = responseDict[Constants.API_ENDPOINTS_LIST]
@@ -141,7 +225,7 @@ class ActionNetworkAPI:
     # If any of the post request fails no later request will be attempted and an exception will be raised
     # CURRENTLY DO NOT RETRY PROGRAMATICALLY UPON EXCEPTION
     # Action Network asks for exopential backoff on failures and this function does not account for that
-    def postPeople(self, people: list[type[Person]], useBackgroundProcessing: bool = True) -> None:
+    def postPeople(self, people: list[type[Person]], useBackgroundProcessing: bool = True):
         # Currently (2023-04-15) Action Network rate limits at 4 per second https://actionnetwork.org/docs/#considerations
         # To avoid any possible conflicts we will wait 0.35 seconds per request
         # Upon failure a exception will be raised and assumed to kill the program
@@ -161,7 +245,7 @@ class ActionNetworkAPI:
     # Do not use this directly
     # The API is rate limited so using this in a tight for loop could cause issues
     # To post a single person use postPeople() with a list of a single person
-    def _postPerson(self, person: type[Person], useBackgroundProcessing: bool = True) -> None:
+    def _postPerson(self, person: type[Person], useBackgroundProcessing: bool = True):
         # Currently we do not support adding or removing tags
         params = {}
         if useBackgroundProcessing:
@@ -173,6 +257,15 @@ class ActionNetworkAPI:
     # Assumes the API key is on the first line of the file
     @staticmethod
     def readAPIKeyFromFile(path: str) -> str:
+        """
+        Read API key from the first line of a file.
+
+        Args:
+            filepath (str): The path to the file containing the API key.
+
+        Returns:
+            str: The API key read from the file.
+        """
         with open(path) as f:
             for line in f:
                 return line.strip()
