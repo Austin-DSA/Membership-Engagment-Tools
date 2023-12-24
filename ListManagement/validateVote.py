@@ -101,10 +101,10 @@ def main(args):
         outputRows.append(vote.toRow())
 
     Utils.writeCSVFile(flags.outputPath, outputCols, outputRows)
-    print("Yes: " + str(numYes))
-    print("No: " + str(numNo))
-    print("Abstain: " + str(numAbstain))
-    print("Total: " + str(numYes + numNo + numAbstain))
+    print(f"Yes: {str(numYes)}")
+    print(f"No: {str(numNo)}")
+    print(f"Abstain: {str(numAbstain)}")
+    print(f"Total: {str(numYes + numNo + numAbstain)}")
 
 
 if __name__ == "__main__":
