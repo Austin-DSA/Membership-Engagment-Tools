@@ -245,20 +245,18 @@ def readMembershipList(path: str) -> (list[str], list[list[str]]):
 
     # Save member counts to aggregate tracker
     logging.info("Reading input")
-    cols, rows = Utils.readCSV(path)
-    return cols, rows
+    return Utils.readCSV(path)
 
 
 def checkForNewCols(cols: list[str]):
     logging.info("Checking for new columns")
-    newCols = []
-    for c in cols:
-        if c not in Constants.COLS_TO_KEEP_FOR_ARCHIVE:
-            logging.error("%s- Is not in the Keep in Archive mapping", c)
-            newCols.append(c)
-    if len(newCols) > 0:
-        logging.error("Found new column not perfoming any operations")
-        raise MembershipListProcessingException(f"Found new columns in list {newCols}")
+    newCols = [col for col in cols if col not in Constants.COLS_TO_KEEP_FOR_ARCHIVE]
+    if not newCols:
+        return
+    for col in newCols:
+        logging.error("%s- Is not in the Keep in Archive mapping", col)
+    logging.error("Found new column not perfoming any operations")
+    raise MembershipListProcessingException(f"Found new columns in list {newCols}")
 
 
 def archiveAndObfuscate(cols: list[str], rows: list[list[str]], googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
@@ -329,11 +327,9 @@ def processRetentionData(cols: list[str], rows: list[list[str]], flags: Commmand
 # We shouldn't lose any columns but we may have duplicates
 def uploadToActionNetwork(cols: list[str], rows: list[list[str]], useBackgroundProcessing: bool):
     logging.info("Uploading members to action network")
-    # A bit redundant to build this map but it will make building the person more convient later
-    # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
-    colToIndex = {}
-    for index, val in enumerate(cols):
-        colToIndex[val] = index
+    # It's a bit redundant to build this map, but it will make building the person more convient later
+    # It's also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
+    colToIndex = {v: k for k, v in enumerate(cols)}
     nonCustomFields = set(
         [
             Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL,
@@ -354,12 +350,7 @@ def uploadToActionNetwork(cols: list[str], rows: list[list[str]], useBackgroundP
     )
     peopleToPost = []
     for row in rows:
-        customFields = {}
-        for col in cols:
-            if col in nonCustomFields:
-                continue
-            customFields[col] = row[colToIndex[col]]
-
+        customFields = {col: row[colToIndex[col]] for col in cols if col not in nonCustomFields}
         peopleToPost.append(
             ActionNetworkAPI.Person(
                 firstName=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]],
