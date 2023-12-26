@@ -9,7 +9,7 @@ import imaplib
 import email
 import email.utils
 import datetime
-from email.message import EmailMessage 
+from email.message import EmailMessage
 import smtplib
 import ssl
 import mimetypes
@@ -19,29 +19,38 @@ import dataclasses
 
 class Constants:
     """Contains constants used for email communication."""
+
     GMAIL_HOST = "imap.gmail.com"
     GMAIL_SMTP_HOST = "smtp.gmail.com"
     GMAIL_SMTP_PORT = 465
 
     class Headers:
         """Contains constants used in the email headers."""
+
         DATE = "Date"
 
     class Responses:
         """Contains constants used in determining email server responses."""
+
         OK = "OK"
 
 
 class EmailApiException(Exception):
     """Exception class for custom email API exceptions."""
+
     class NoUnread(Exception):
         """Exception class to be raised when no unread email is found."""
+
         pass
+
     class NoUnreadRecentEnough(Exception):
         """Exception class to be raised when no unread email is found that is more recent than the requested date."""
+
         pass
+
     class NoAttachmentMatch(Exception):
         """Exception class to be raised when the email doesn't have a attachment matching the specified criteria."""
+
         pass
 
 
@@ -55,6 +64,7 @@ class Attachement:
         name (str): The name of the attachment.
 
     """
+
     path: str
     name: str
 
@@ -71,6 +81,7 @@ class EmailAccount:
         address (str): The email address associated with the account.
         lastReturnedMessage: The last returned message from the email server.
     """
+
     def __init__(self, username: str, password: str, host: str = Constants.GMAIL_HOST) -> None:
         """Configures IMAP settings and logs in to the email server.
 

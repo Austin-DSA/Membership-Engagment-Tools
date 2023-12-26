@@ -21,8 +21,10 @@ import os
 
 class Constants:
     """Contains constants used in the GoogleDriveAPI module."""
+
     class Metadata:
         """Contains constant metadata keys."""
+
         TITLE = "title"
         PARENTS = "parents"
         ID = "id"
@@ -32,11 +34,13 @@ class Constants:
 
     class Paths:
         """Contains constant file paths."""
+
         GOOGLE_AUTH_YAML = "googleAuthSettings.yaml"
         RETENTION_DATA_FILE = "adsa-retention-data.csv"
 
     class IDs:
         """Contains constant IDs."""
+
         RETENTION_ARCHIVE_FOLDER = "1iD0WtMeP9DvBA1HULJbWPRcLWKPddve-"
         RETENTION_DATA_FILE = "1ORnCuXxm1eFXVtWfeEn9fsjY6Nd3N3Ld"
 
@@ -47,6 +51,7 @@ TOKEN_FILE = "./token.json"
 
 class GoogleDriveAPI:
     """Provides methods to interact with the Google Drive API."""
+
     def __init__(self) -> None:
         """Initializes a new instance of the GoogleDriveAPI class."""
         self.gauth = GoogleAuth()

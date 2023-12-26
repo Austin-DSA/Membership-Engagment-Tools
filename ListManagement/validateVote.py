@@ -24,20 +24,22 @@ Note: This docstring provides an overview of the script's functionality and usag
 
 
 import argparse
-import Utils
-import sys
 import dataclasses
+import Utils
 
 
 class Constants:
     """Contains constant values used in the script."""
+
     class VOTE_COLS:
         """Contains constant values for the vote columns."""
+
         EMAIL = "email"  # Will probably need updating
         VOTE = "vote"
 
     class VOTE_TYPES:
         """Contains constant values for the vote types."""
+
         YES = "Yes"
         NO = "No"
         ABSTAIN = "Abstain"
@@ -45,6 +47,7 @@ class Constants:
 
 class CommmandFlags:
     """Defines the command line flags and their corresponding long forms."""
+
     VOTE_LIST = "-v"
     VOTE_LIST_LONG = "--vote-list"
     MEMBERSHIP_LIST = "-m"
@@ -84,6 +87,7 @@ def parseArgs():
 @dataclasses.dataclass
 class Vote:
     """Represents a single vote entry."""
+
     email: str
     vote: str
     status: str = ""
@@ -105,7 +109,9 @@ def main():
     # Read in all the votes
     voteListCols, voteListRows = Utils.readCSV(flags.voteListPath)
     voteColIndexes = Utils.getIndexesForColumns(voteListCols, [Constants.VOTE_COLS.EMAIL, Constants.VOTE_COLS.VOTE])
-    allVotes = [Vote(voteRow[voteColIndexes[Constants.VOTE_COLS.EMAIL]].lower().strip(), voteRow[voteColIndexes[Constants.VOTE_COLS.VOTE]]) for voteRow in voteListRows]
+    allVotes = [
+        Vote(voteRow[voteColIndexes[Constants.VOTE_COLS.EMAIL]].lower().strip(), voteRow[voteColIndexes[Constants.VOTE_COLS.VOTE]]) for voteRow in voteListRows
+    ]
 
     # Remove earlier votes from the same person
     # Assumes things are sorted in voting list by time

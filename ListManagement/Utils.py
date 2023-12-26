@@ -12,16 +12,19 @@ import datetime
 
 class UtilsException(Exception):
     """Custom exception class used in utility functions."""
+
     pass
 
 
 class Constants:
     """Contains constant values used throughout the module."""
+
     TODAY_STR = datetime.date.today().isoformat()
 
     # Membership Standing
     class MEMBERSHIP_LIST_COLS:
         """Contains constants of the column names used in the membership list."""
+
         FIRST_NAME = "first_name"
         LAST_NAME = "last_name"
         STANDING_COL = "membership_status"
@@ -52,6 +55,7 @@ class Constants:
 
     class MEMBERSHIP_STATUS:
         """Contains constants of the valid possible membership statuses."""
+
         LAPSED = "lapsed"
         GOOD_STANDING = "member in good standing"
         MEMBER = "member"

@@ -34,11 +34,13 @@ import EmailAPI
 
 class MembershipListProcessingException(Exception):
     """Exception raised for errors during membership list processing."""
+
     pass
 
 
 class Constants:
     """Contains constants used for processing membership lists from DSA National."""
+
     WORKING_DIR = os.path.join(os.path.dirname(__file__), "workingDir")
     RETENTION_DATA_FILE_PATH = os.path.join(os.path.dirname(__file__), "adsa-retention-data.csv")
     ARCHIVE_FOLDER_PATH = os.path.join(os.path.dirname(__file__), "Archive")
@@ -119,6 +121,7 @@ class Constants:
 
 class CommmandFlags:
     """Contains command line flags to be confiured by the parseArgs function."""
+
     FILENAME = "filename"
     AUTOMATE = "--automate"
     AUTOMATE_AN = "--auto_an"
@@ -484,11 +487,11 @@ def uploadToActionNetwork(cols: list[str], rows: list[list[str]], useBackgroundP
 
 def main():
     """
-	Hey, I just met you, and this is crazy, but I'm the main function, so call me maybe.
+    Hey, I just met you, and this is crazy, but I'm the main function, so call me maybe.
 
-	Raises:
-        Exception: If any exception is raised. If any exception is raised, the program will attempt to send email reports of the error if emailAccount is configured.
-	"""
+    Raises:
+    Exception: If any exception is raised. If any exception is raised, the program will attempt to send email reports of the error if emailAccount is configured.
+    """
     setup()
     emailAccount = None
     try:

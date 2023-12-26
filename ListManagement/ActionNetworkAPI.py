@@ -22,7 +22,8 @@ import logging
 
 
 class Constants:
-    """ Contains constants used in the ActionNetworkAPI module."""
+    """Contains constants used in the ActionNetworkAPI module."""
+
     # URLS
     API_ENTRY = "https://actionnetwork.org/api/v2/"
     BACKGROUN_PROCESSING_QUERY_PARAM = "background_request"
@@ -73,7 +74,7 @@ class PersonAddress:
         country: The country of the address. Default is "US".
         region: The region of the address. Default is "TX".
         city: The city of the address. Default is "Austin".
-    
+
     Methods:
         toDict(): Converts the PersonAddress object to a dictionary.
 
@@ -115,6 +116,7 @@ class Person:
     Raises:
         InvalidPerson: If a custom field conflicts with restricted API keys or if a custom field value is not a string.
     """
+
     firstName: str
     lastName: str
     email: str
@@ -155,16 +157,19 @@ class Person:
 
 class InvalidPerson(Exception):
     """Exception raised when an invalid person object is encountered."""
+
     pass
 
 
 class InvalidAPIResponse(Exception):
     """Exception raised when an invalid API response is encountered."""
+
     pass
 
 
 class ActionNetworkAPI:
     """Represents the Action Network API to allow uploading of member data."""
+
     def __init__(self, apiKey: str):
         """
         Initializes the ActionNetworkAPI object with the provided API key.
