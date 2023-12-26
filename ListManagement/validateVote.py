@@ -98,7 +98,7 @@ class Vote:
         return [self.email, self.vote, self.status]
 
 
-def main(args):
+def main():
     """Hey, I just met you, and this is crazy, but I'm the main function, so call me maybe."""
     flags = parseArgs()
 
@@ -155,4 +155,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
