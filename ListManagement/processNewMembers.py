@@ -234,7 +234,7 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
     return Constants.DOWNLOAD_LIST_PATH
 
 
-def readMembershipList(path: str) -> (list, list):
+def readMembershipList(path: str) -> (list[str], list[list[str]]):
     logging.info("Reading membership list from %s", path)
     if not os.path.exists(path):
         logging.error("Input file DNE %s", path)
@@ -261,7 +261,7 @@ def checkForNewCols(cols: list[str]):
         raise MembershipListProcessingException(f"Found new columns in list {newCols}")
 
 
-def archiveAndObfuscate(cols: list[str], rows: list[str], googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
+def archiveAndObfuscate(cols: list[str], rows: list[list[str]], googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
     logging.info("Archiving and obfuscating")
     # Convert file to archive obfuscate
     colIndexs = []
@@ -280,7 +280,7 @@ def archiveAndObfuscate(cols: list[str], rows: list[str], googleDriveApi: typing
         Utils.writeCSVFile(os.path.join(Constants.ARCHIVE_FOLDER_PATH, archiveName), newCols, archiveRows)
 
 
-def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags, googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
+def processRetentionData(cols: list[str], rows: list[list[str]], flags: CommmandFlags, googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
     logging.info("Starting Retention processing")
     membersGoodStanding = 0
     membersMember = 0
@@ -323,11 +323,11 @@ def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags,
         logging.error("Neither local retention nor automated google drive was specified. Not saving retention.")
 
 
-def uploadToActionNetwork(cols: list[str], rows: list[str], useBackgroundProcessing: bool):
-    # For uploads we will not convert to our old columns but instead use what national sends down
-    # For non-automated will keep the conversion, but our columns include spaces and capital letters
-    # The API connector will auto-lowercase
-    # We shouldn't lose any columns but we may have duplicates
+# For uploads we will not convert to our old columns but instead use what national sends down
+# For non-automated will keep the conversion, but our columns include spaces and capital letters
+# The API connector will auto-lowercase
+# We shouldn't lose any columns but we may have duplicates
+def uploadToActionNetwork(cols: list[str], rows: list[list[str]], useBackgroundProcessing: bool):
     logging.info("Uploading members to action network")
     # A bit redundant to build this map but it will make building the person more convient later
     # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile

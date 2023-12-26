@@ -76,7 +76,7 @@ def getValueWithAnyName(d: dict, names: list):
     raise IndexError(f"None of {names} found in {d}")
 
 
-def readCSV(filename: str) -> (list, list):
+def readCSV(filename: str) -> (list[str], list[list[str]]):
     """Read a CSV file and return its contents as columns and rows.
 
     Args:
@@ -104,6 +104,7 @@ def writeCSVFile(filename: str, cols: list[str], rows: list[list[str]]):
         filename (str): The path to the CSV file.
         cols (list[str]): The column names.
         rows (list[list[str]]): The rows of data.
+
     Returns:
         None
     """
