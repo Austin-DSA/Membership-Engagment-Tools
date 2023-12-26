@@ -1,3 +1,24 @@
+"""
+processNewMembers.py
+
+This module is responsible for processing new members' information and performing various actions based on the provided flags.
+
+Functions:
+- main(): The main function that orchestrates the processing of new members' information.
+- setup(): Performs initial setup tasks.
+- parseArgs(): Parses command line arguments and returns the parsed flags.
+- setupEmail(): Sets up the email account for downloading the membership list.
+- dowloadMembershipListFromEmail(emailAccount): Downloads the membership list from the specified email account.
+- readMembershipList(inputFileName): Reads the membership list from the provided file.
+- checkForNewCols(cols): Checks if there are any new columns in the membership list.
+- archiveAndObfuscate(cols, rows, googleDriveApi): Copies the membership list to an archive and obfuscates sensitive information.
+- processRetentionData(cols, rows, googleDriveApi): Processes the retention data and appends results to a csv or a file stored in a Google Drive account.
+- uploadToActionNetwork(cols, rows, googleDriveApi): Uploads the membership list to ActionNetwork via their API.
+
+Note: This docstring provides an overview of the script's functionality and usage. Please refer to the code comments for more detailed explanations of each step and component.
+"""
+
+
 import argparse
 import datetime
 import logging
@@ -12,11 +33,12 @@ import EmailAPI
 
 
 class MembershipListProcessingException(Exception):
+    """Exception raised for errors during membership list processing."""
     pass
 
 
 class Constants:
-    # Paths
+    """Contains constants used for processing membership lists from DSA National."""
     WORKING_DIR = os.path.join(os.path.dirname(__file__), "workingDir")
     RETENTION_DATA_FILE_PATH = os.path.join(os.path.dirname(__file__), "adsa-retention-data.csv")
     ARCHIVE_FOLDER_PATH = os.path.join(os.path.dirname(__file__), "Archive")
@@ -96,6 +118,7 @@ class Constants:
 
 
 class CommmandFlags:
+    """Contains command line flags to be confiured by the parseArgs function."""
     FILENAME = "filename"
     AUTOMATE = "--automate"
     AUTOMATE_AN = "--auto_an"
@@ -107,6 +130,7 @@ class CommmandFlags:
     BACKGROUND = "--background"
 
     def __init__(self, filename : str, doNotArchive : bool, doNotRetention : bool, doNotActionNetwork : bool, automateActionNetwork : bool, automateGoogleDrive: bool, useLocalRetention : bool, useANBackground: bool) -> None:
+        """Initializes an instance of CommandFlags with the given parameters."""
         self.filename = filename
         self.archive = not doNotArchive
         self.retention = not doNotRetention
@@ -118,8 +142,9 @@ class CommmandFlags:
 
 
 def parseArgs():
+    """Parses command line arguments and returns an instance of CommandFlags."""
     # I am using hardcoded strings here since you can't subscript the parsed args by the argument name
-    # NOW WHY YOU CAN"T IS BEYONd ME and if you want to yell at python for me I would kiss you
+    # NOW WHY YOU CAN'T IS BEYOND ME and if you want to yell at python for me I would kiss you
     # Since the scope of the strings is literally just this function I figured making constants would be a bit much
     # Especially since the error from an incorrect string should stop the program before starting
     parser = argparse.ArgumentParser(description="Process the member list from National DSA")
@@ -188,6 +213,7 @@ def parseArgs():
 
 
 def setup():
+    """Ensures the existance of working directory and configures logging for membership list processing."""
     if not os.path.exists(Constants.WORKING_DIR):
         os.mkdir(Constants.WORKING_DIR)
     logging.basicConfig(filename=Constants.LOG_PATH, level=logging.INFO, format="%(asctime)s : %(levelname)s : %(message)s")
@@ -196,6 +222,15 @@ def setup():
 
 
 def setupEmail() -> EmailAPI.EmailAccount:
+    """
+    Performs authentication for an email account so other functions can access the email account.
+
+    Returns:
+        EmailAPI.EmailAccount: An instance representing the email account that has been configured.
+
+    Raises:
+        MembershipListProcessingException: If email credentials cannot be read.
+    """
     logging.info("Setting up email account")
     logging.info("Reading from email")
     mailUsername = None
@@ -212,6 +247,15 @@ def setupEmail() -> EmailAPI.EmailAccount:
 
 
 def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
+    """
+    Downloads a membership list from the most recent matching unread email with a zip attachment.
+
+    Args:
+        emailAccount (EmailAPI.EmailAccount): The email account instance to use.
+
+    Returns:
+        str: The path to the downloaded file.
+    """
     if os.path.exists(Constants.DOWNLOAD_ZIP_PATH):
         logging.info("Found old downloaded zip file, deleting")
         os.remove(Constants.DOWNLOAD_ZIP_PATH)
@@ -235,6 +279,15 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
 
 
 def readMembershipList(path: str) -> (list[str], list[list[str]]):
+    """
+    Reads a membership list csv into lists of rows and columns.
+
+    Args:
+        path (str): The path to the membership list csv file.
+
+    Returns:
+        tuple: A tuple containing the column names and the rows of data from the csv file.
+    """
     logging.info("Reading membership list from %s", path)
     if not os.path.exists(path):
         logging.error("Input file DNE %s", path)
@@ -249,6 +302,15 @@ def readMembershipList(path: str) -> (list[str], list[list[str]]):
 
 
 def checkForNewCols(cols: list[str]):
+    """
+    Checks a list of column names to see whether it contains column names that are not expected (such as in the case of DSA National changing their titles).
+
+    Args:
+        cols (list[str]): A list of column names.
+
+    Raises:
+        MembershipListProcessingException: If any columns are found that are not in expected.
+    """
     logging.info("Checking for new columns")
     newCols = [col for col in cols if col not in Constants.COLS_TO_KEEP_FOR_ARCHIVE]
     if not newCols:
@@ -260,6 +322,17 @@ def checkForNewCols(cols: list[str]):
 
 
 def archiveAndObfuscate(cols: list[str], rows: list[list[str]], googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
+    """
+    Archives and obfuscates membership data for long-term tracking of membership trends.
+
+    Args:
+        cols (list[str]): The list of column names.
+        rows (list[list[str]]): The list of rows containing data.
+        googleDriveApi (Optional[GoogleDriveAPI.GoogleDriveAPI]): An optional instance of the GoogleDriveAPI class if uploading to Google Drive.
+
+    Returns:
+        None
+    """
     logging.info("Archiving and obfuscating")
     # Convert file to archive obfuscate
     colIndexs = []
@@ -279,6 +352,18 @@ def archiveAndObfuscate(cols: list[str], rows: list[list[str]], googleDriveApi: 
 
 
 def processRetentionData(cols: list[str], rows: list[list[str]], flags: CommmandFlags, googleDriveApi: typing.Optional[GoogleDriveAPI.GoogleDriveAPI]):
+    """
+    Processes the retention data and appends results to a csv or a file stored in a Google Drive account.
+
+    Args:
+        cols (list[str]): The list of column names.
+        rows (list[list[str]]): The list of rows containing data.
+        flags (CommmandFlags): The flags for processing.
+        googleDriveApi (Optional[GoogleDriveAPI.GoogleDriveAPI]): An optional instance of the GoogleDriveAPI class if uploading to Google Drive.
+
+    Raises:
+        MembershipListProcessingException: If membership standing column is not found, column rows don't match up, or undefined membership status is encountered.
+    """
     logging.info("Starting Retention processing")
     membersGoodStanding = 0
     membersMember = 0
@@ -294,10 +379,10 @@ def processRetentionData(cols: list[str], rows: list[list[str]], flags: Commmand
     for row in rows:
         if len(row) != len(cols):
             logging.error(
-                "Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.%s", [x for x in zip(cols, row)]
+                "Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted. %s", [x for x in zip(cols, row)]
             )
             raise MembershipListProcessingException(
-                f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted.{[x for x in zip(cols, row)]}"
+                f"Column Row Mismatch. Most likely a comma problem. Inspect the row in the input file and rearchive if wanted. {[x for x in zip(cols, row)]}"
             )
 
         status = row[standingIndex].strip().lower()
@@ -326,6 +411,14 @@ def processRetentionData(cols: list[str], rows: list[list[str]], flags: Commmand
 # The API connector will auto-lowercase
 # We shouldn't lose any columns but we may have duplicates
 def uploadToActionNetwork(cols: list[str], rows: list[list[str]], useBackgroundProcessing: bool):
+    """
+    Uploads members to Action Network via their API.
+
+    Args:
+        cols (list[str]): List of column names.
+        rows (list[list[str]]): The list of rows containing data.
+        useBackgroundProcessing (bool): Include the background_requests flag in the API call.
+    """
     logging.info("Uploading members to action network")
     # It's a bit redundant to build this map, but it will make building the person more convient later
     # It's also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
@@ -390,6 +483,12 @@ def uploadToActionNetwork(cols: list[str], rows: list[list[str]], useBackgroundP
 
 
 def main():
+    """
+	Hey, I just met you, and this is crazy, but I'm the main function, so call me maybe.
+
+	Raises:
+        Exception: If any exception is raised. If any exception is raised, the program will attempt to send email reports of the error if emailAccount is configured.
+	"""
     setup()
     emailAccount = None
     try:
