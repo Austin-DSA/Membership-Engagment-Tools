@@ -1,15 +1,7 @@
 """
-Provides a Python interface for interacting with the Action Network API.
-It includes classes and functions for performing various actions such as creating a person, adding tags, and updating custom fields.
+Provides a Python interface for interacting with activist records via the Action Network API.
 
-Classes:
-- Constants: Contains constants used in the module.
-- PersonAddress: Represents a person's address.
-- Person: Represents a person's personal information.
-
-Note: Make sure to set the API key in the `HEADER_API_KEY` constant before making API requests.
-
-For more information, refer to the Action Network API documentation: [link to documentation]
+Note: Make sure to save your API key in the file actionNetworkAPIKey.txt before using this module.
 """
 
 
@@ -66,7 +58,7 @@ class Constants:
 @dataclasses.dataclass
 class PersonAddress:
     """
-    Represents a person's address data.
+    Represents a activist's address data.
 
     Attributes:
         zip_code: The zip code of the address.
