@@ -93,7 +93,9 @@ class Constants:
         "dsa_chapter"                  : True,
         "accomodations"                : True,
         "accommodations"               : True,
-        "race"                         : True
+        "race"                         : True,
+        "list_date"                    : True,
+        "new_members_last_month"       : True
     }
 
 class CommmandFlags:
@@ -297,7 +299,8 @@ def processRetentionData(cols: list[str], rows: list[str], flags: CommmandFlags,
     else:
         logging.error("Neither local retention nor automated google drive was specified. Not saving retention.")
 
-def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessing:bool):
+# Returns the list of failed uploads
+def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessing:bool) -> list[tuple[str,str]]:
     # For uploads we will not convert to our old columns but instead use what national sends down
     # For non-automated will keep the conversion, but our columns include spaces and capital letters
     # The API connector will auto-lowercase
@@ -343,12 +346,13 @@ def uploadToActionNetwork(cols: list[str], rows:list[str], useBackgroundProcessi
                                                                     row[Utils.getValueWithAnyName(colToIndex, [Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2, Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2])]]
                                                     )))
     api = ActionNetworkAPI.ActionNetworkAPI(apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(os.path.join(os.path.dirname(__file__),"actionNetworkAPIKey.txt")))
-    api.postPeople(people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing)
+    return api.postPeople(people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing)
 
 def main():
     setup()
     emailAccount = None
     try:
+        success = True         # Used for failures that don't stop execution
         flags = parseArgs()
         inputFileName = flags.filename
         if flags.filename == "EMAIL":
@@ -374,7 +378,8 @@ def main():
             processRetentionData(cols,rows,flags,googleDriveApi)
         else:
             logging.info("Skipping Retention")
-
+        
+        failedUploads = []
         # Create csv for action network
         if flags.actionNetwork:
             if not flags.automateActionNetwork:
@@ -382,18 +387,31 @@ def main():
                 logging.info("Creating action network upload file")
                 Utils.writeCSVFile(os.path.join(Constants.OUTPUT_DIR_PATH, "action-network-"+Utils.Constants.TODAY_STR+".csv"), cols, rows)
             else:
-                uploadToActionNetwork(cols,rows,flags.useANBackground)
+                failedUploads = uploadToActionNetwork(cols,rows,flags.useANBackground)
+                if len(failedUploads) > 0:
+                    success = False
+                for (personText, errorText) in failedUploads:
+                    # Log twice to make it more obvious and easy to find by scrolling to end
+                    logging.error("Failed to upload: %s because of %s", personText, errorText)
         else:
             logging.info("Skipping Action Network")
 
         if emailAccount is not None:
             for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
-                emailAccount.sendMessage(
-                    emailAddress,
-                    "Successful Membership Upload",
-                    "Uploaded Membership List",
-                    [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
-                )
+                if success:
+                    emailAccount.sendMessage(
+                        emailAddress,
+                        "Successful Membership Upload",
+                        "Uploaded Membership List",
+                        [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+                    )
+                else:
+                    emailAccount.sendMessage(
+                        emailAddress,
+                        "Failed Membership Upload",
+                        "Critical errors occured during processing check logs for more details",
+                        [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+                    )
 
     except Exception as err:
         logging.error("Failed to process membership list due to error")
