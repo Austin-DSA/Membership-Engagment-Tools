@@ -139,21 +139,33 @@ class ActionNetworkAPI:
     # If any of the post request fails no later request will be attempted and an exception will be raised
     # CURRENTLY DO NOT RETRY PROGRAMATICALLY UPON EXCEPTION
     # Action Network asks for exopential backoff on failures and this function does not account for that
-    def postPeople(self, people: list[type[Person]], useBackgroundProcessing:bool = True) -> None:
+    # Returns a list of people that failed
+    def postPeople(self, people: list[type[Person]], useBackgroundProcessing:bool = True) -> list[tuple[str,str]]:
          # Currently (2023-04-15) Action Network rate limits at 4 per second https://actionnetwork.org/docs/#considerations
          # To avoid any possible conflicts we will wait 0.35 seconds per request
          # Upon failure a exception will be raised and assumed to kill the program
+         failedUploads = []
          numPeople = len(people)
          currentPerson = 0
          for person in people:
               logging.info("Uploading "+person.firstName+" "+person.lastName+" "+str(currentPerson)+"/"+str(numPeople))
               startTime = datetime.datetime.now()
-              self._postPerson(person, useBackgroundProcessing)
+              try:
+                   self._postPerson(person, useBackgroundProcessing)
+              except Exception as err:
+                   personText = f"({person.firstName}, {person.lastName}, {person.email})"
+                   errorText = f"{err}"
+                   logging.error("Failed to upload: %s because of %s", personText, errorText)
+                   failedUploads.append((personText, errorText))
+                   # Sleep an extra few seconds to back off of server
+                   time.sleep(2)
+
               # Sleep to avoid rate limit if we aren't background processing
               timeInRequest = datetime.datetime.now() - startTime
               if not useBackgroundProcessing and timeInRequest < datetime.timedelta(seconds=0.35):
-                   timeToSleep = 0.35 - timeInRequest.seconds
-                   time.sleep(timeToSleep)
+                   timeToSleep = 0.5 - timeInRequest.seconds
+                   if timeToSleep > 0:
+                        time.sleep(timeToSleep)
               currentPerson += 1
     
     # Do not use this directly
