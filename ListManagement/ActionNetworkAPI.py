@@ -167,6 +167,7 @@ class ActionNetworkAPI:
                    if timeToSleep > 0:
                         time.sleep(timeToSleep)
               currentPerson += 1
+         return failedUploads
     
     # Do not use this directly
     # The API is rate limited so using this in a tight for loop could cause issues
