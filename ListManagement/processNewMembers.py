@@ -95,7 +95,8 @@ class Constants:
         "accommodations"               : True,
         "race"                         : True,
         "list_date"                    : True,
-        "new_members_last_month"       : True
+        "new_members_last_month"       : True,
+        "new_member_past_month"        : True
     }
 
 class CommmandFlags:
