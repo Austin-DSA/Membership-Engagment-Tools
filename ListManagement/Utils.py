@@ -11,6 +11,7 @@ class Constants:
      # Membership Standing
     class MEMBERSHIP_LIST_COLS:
         FIRST_NAME = "first_name"
+        MIDDLE_NAME = "middle_name"
         LAST_NAME = "last_name"
         STANDING_COL = "membership_status"
         EMAIL_COL = "email"
@@ -37,6 +38,8 @@ class Constants:
 
         BILLING_ZIP_COL = "billing_zip"
         PHONE = "best_phone"
+
+        JOIN_DATE = "join_date"
         
 
     class MEMBERSHIP_STATUS:
