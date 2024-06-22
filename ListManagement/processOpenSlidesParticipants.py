@@ -44,7 +44,7 @@ class CommmandFlags:
     OUTPUT_LONG = "--output"
     HELP = "-h"
     HELP_LONG = "--help"
-    USAGE = "usage: python (python3 on mac) proccessOpenSlidesParticipants.py -p exportFromLastGBM.csv -m currentMembershipListFromActionNetwork.csv -o output-csv"
+    USAGE = "usage: python (python3 on mac) processOpenSlidesParticipants.py -p exportFromLastGBM.csv -m currentMembershipListFromActionNetwork.csv -o output-csv"
 
     def __init__(self, prevListPath, membershipListPath, outputPath) -> None:
         self.prevListPath = prevListPath
