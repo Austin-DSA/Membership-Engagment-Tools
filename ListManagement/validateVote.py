@@ -73,39 +73,39 @@ def main(args):
     
     membershipListCols, membershipListRows = Utils.readCSV(flags.mebershipListPath)
     membershipListColIndexes = Utils.getIndexesForColumns(membershipListCols, [Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL, 
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME,
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.MIDDLE_NAME,
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME,
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
-                                                                               Utils.Constants.MEMBERSHIP_LIST_COLS.JOIN_DATE,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.MIDDLE_NAME,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
+                                                                            #    Utils.Constants.MEMBERSHIP_LIST_COLS.JOIN_DATE,
                                                                                Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL])
 
     # Check for membership collisions
-    print("Checking for collisions in membership ")
-    for v1 in votes:
-        for v2 in votes:
-            if v1.email == v2.email:
-                continue
-            v1Member = None
-            v2Member = None
-            for row in membershipListRows:
-                if row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]].lower().strip() == v1.email:
-                    v1Member = row
-                if row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]].lower().strip() == v2.email:
-                    v2Member = row
-                if v1Member is not None and v2Member is not None:
-                    break
-            if v1Member is None or v2Member is None:
-                continue
+    # print("Checking for collisions in membership ")
+    # for v1 in votes:
+    #     for v2 in votes:
+    #         if v1.email == v2.email:
+    #             continue
+    #         v1Member = None
+    #         v2Member = None
+    #         for row in membershipListRows:
+    #             if row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]].lower().strip() == v1.email:
+    #                 v1Member = row
+    #             if row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]].lower().strip() == v2.email:
+    #                 v2Member = row
+    #             if v1Member is not None and v2Member is not None:
+    #                 break
+    #         if v1Member is None or v2Member is None:
+    #             continue
             # Check First-Middle-Last Name
             # Check address1-address2-zip
             # Check if join_date is on the same day
-            v1MemberName = f"{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.MIDDLE_NAME]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]].lower().strip()}"
-            v2MemberName = f"{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.MIDDLE_NAME]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]].lower().strip()}"
-            v1MemberAddress = f"{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2]].lower().strip()}"
-            v2MemberAddress = f"{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2]].lower().strip()}"
+            # v1MemberName = f"{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.MIDDLE_NAME]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]].lower().strip()}"
+            # v2MemberName = f"{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.MIDDLE_NAME]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]].lower().strip()}"
+            # v1MemberAddress = f"{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2]].lower().strip()}-{v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2]].lower().strip()}"
+            # v2MemberAddress = f"{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2]].lower().strip()}-{v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2]].lower().strip()}"
             # v1MemberJoinDate = datetime.datetime.strptime(v1Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.JOIN_DATE]].lower().strip(), "%Y-%m-%d")
             # v2MemberJoinDate = datetime.datetime.strptime(v2Member[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.JOIN_DATE]].lower().strip(), "%Y-%m-%d")
             # if v1MemberName == v2MemberName:
@@ -131,9 +131,10 @@ def main(args):
 
             
             vote.found = True
-            vote.status = row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL]]
+            vote.status = row[membershipListColIndexes[Utils.Constants.MEMBERSHIP_LIST_COLS.STANDING_COL]].lower().strip()
             print(f"Found member for email {vote.email} - {vote.vote} - {vote.status}")
-            if vote.status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
+            if vote.status != Utils.Constants.MEMBERSHIP_STATUS.GOOD_STANDING:
+                print(f"Member {vote.email} is not in good standing {vote.status}")
                 break
             if vote.vote == Constants.VOTE_TYPES.YES:
                 numYes += 1
