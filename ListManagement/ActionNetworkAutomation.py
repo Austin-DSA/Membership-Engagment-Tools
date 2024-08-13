@@ -24,7 +24,6 @@ class EventInfo:
     endTime : typing.Optional[datetime.datetime] = None
 
 
-# TODO: Add Group Checks
 # TODO: Logging
 # TODO: Errors
 
@@ -118,13 +117,13 @@ class DashboardScreen(Screen):
             h6s = containgDiv.find_elements(By.TAG_NAME, "h6")
             found = False
             for h6 in h6s:
-                print(h6.text)
                 if h6.text.lower() == DashboardScreen.Texts.CURRENTLY_MANAGING.lower():
                     found = True
                     break
             if not found: 
                 logging.error("DashboardScreen: Couldn't find currently managing text")
                 return False
+            
             h2s = containgDiv.find_elements(By.TAG_NAME, "h2")
             found = False
             for h2 in h2s:
@@ -134,6 +133,7 @@ class DashboardScreen(Screen):
             if not found: 
                 logging.error("DashboardScreen: Couldn't find group text %s", self.groupText)
                 return False
+            
             logging.info("DashboardScreen: Exists")
             return True
         except Exception as e:
