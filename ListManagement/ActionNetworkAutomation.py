@@ -43,9 +43,6 @@ class Screen(abc.ABC):
             return None
         return screen
 
-    def exists(self) -> bool:
-        self.__class__.exists(driver=self.driver)
-
     def __init__(self, driver):
         super().__init__()
         self.driver = driver
