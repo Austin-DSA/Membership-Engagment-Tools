@@ -1,0 +1,24 @@
+name: tests
+on: push
+
+
+jobs:
+
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: gem install --user-install -n~/bin mdl
+      - run: ~/bin/mdl -s tests/markdown_rules.rb README.md ListManagement/ Recommit-Drive-2022/
+
+
+  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: sudo apt install -y black
+      - run: >-
+           black --target-version py310 --check --verbose --include '\.py$' --exclude '\.(md|txt|pdf)$' . 
