@@ -8,6 +8,9 @@ import datetime
 import typing
 import abc
 import logging
+
+import selenium.webdriver.support
+import selenium.webdriver.support.select
 @dataclasses.dataclass
 class EventInfo:
     title : str
@@ -16,16 +19,17 @@ class EventInfo:
     locationName : str
     address : str
     city : str
-    state : str = "TX"
     zip : str
-    country : str = "US"
     description: str
     insturctions: str
+    state : str = "TX"
+    country : str = "US"
     endTime : typing.Optional[datetime.datetime] = None
 
-
-# TODO: Logging
-# TODO: Errors
+@dataclasses.dataclass
+class EventConfirmationInfo:
+    manageLink : str
+    directLink : str
 
 class Utils:
 
@@ -155,7 +159,7 @@ class EditEventScreen(Screen):
     class IDs:
         TITLE_INPUT = "event-title"
         
-        IS_VIRTUAL_INPUT = "event_physical_location_toggle"
+        IS_VIRTUAL_INPUT = "event_physical_locatioin_toggle"
         HAS_END_TIME_INPUT = "event_endtime_toggle"
         
         START_DATE_INPUT = "event-start-date"
@@ -168,7 +172,8 @@ class EditEventScreen(Screen):
         ZIP_INPUT = "event-zip"
         COUNTRY_INPUT = "form-country"
 
-        DESCRIPTION_INPUT = "event-description"
+        # The actual text area isn't editable as it is hidden. I don't like using this id since it looks auto-generated and therefore could become useless but works for now
+        DESCRIPTION_INPUT = "redactor-uuid-0"#"event-description"
 
         NEXT_STEP_BUTTON = "event-publish_link_button"
 
@@ -182,31 +187,43 @@ class EditEventScreen(Screen):
     
 
     def _titleInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.TITLE_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.TITLE_INPUT)
     def _isVirtualICheckBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.IS_VIRTUAL_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.IS_VIRTUAL_INPUT)
     def _hasEndTimeICheckBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.HAS_END_TIME_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.HAS_END_TIME_INPUT)
     def _startDateInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.START_DATE_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.START_DATE_INPUT)
+    def _startDateTimePicker(self):
+        # There are two date time pickers, one for end and one for start
+        # The start one is first so we can just grab it by class
+        return self.driver.find_element(By.CLASS_NAME, EditEventScreen.Classes.DATETIME_PICKER)
     def _endDateInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.END_DATE_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.END_DATE_INPUT)
+    def _endDateTimePicker(self):
+        # There are two date time pickers, one for end and one for start
+        # The end one is second so we need to grab all and return the second
+        pickers = self.driver.find_elements(By.CLASS_NAME, EditEventScreen.Classes.DATETIME_PICKER)
+        if len(pickers) < 2:
+            logging.error("EditEventScreen: Couldn't find the end time datepicker in list")
+            raise Exception("EditEventScreen: Couldn't find the end time datepicker in list")
+        return pickers[1]
     def _locationInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.LOCATION_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.LOCATION_INPUT)
     def _addressInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.ADDRESS_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.ADDRESS_INPUT)
     def _cityInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.CITY_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.CITY_INPUT)
     def _stateInputDropdown(self):
-        return self.driver.find_element(EditEventScreen.IDs.STATE_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.STATE_INPUT)
     def _zipInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.ZIP_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.ZIP_INPUT)
     def _countryInputDropdown(self):
-        return self.driver.find_element(EditEventScreen.IDs.COUNTRY_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.COUNTRY_INPUT)
     def _descriptionInputBox(self):
-        return self.driver.find_element(EditEventScreen.IDs.DESCRIPTION_INPUT)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.DESCRIPTION_INPUT)
     def _nextStepButton(self):
-        return self.driver.find_element(EditEventScreen.IDs.NEXT_STEP_BUTTON)
+        return self.driver.find_element(By.ID, EditEventScreen.IDs.NEXT_STEP_BUTTON)
     
     def exists(self) -> bool:
         try:
@@ -227,8 +244,7 @@ class EditEventScreen(Screen):
             logging.info("EditEventScreen: Does not exist %s", str(e))
             return False
         
-    def _fillOutDatePicker(self, time: datetime.datetime):
-        dateTimePicker = self.driver.find_element(By.CLASS_NAME, EditEventScreen.Classes.DATETIME_PICKER)
+    def _fillOutDatePicker(self, time: datetime.datetime, dateTimePicker):
         inCorrectMonthYear = False
         wantedMonthYearText = time.strftime("%B %Y")
         while not inCorrectMonthYear:
@@ -242,7 +258,7 @@ class EditEventScreen(Screen):
                 dateTimePicker.find_element(By.CLASS_NAME, EditEventScreen.Classes.DATETIME_PICKER_FORWARD).click()
             else:
                 logging.info("EditEventScreen: Date Picker is in %s which is AFTER %s, going backwards", currentMonthYearElem.text, wantedMonthYearText)
-                dateTimePicker.find_element(By.CLASS_NAME, EditEventScreen.Classes.DATETIME_PICKER_FORWARD).click()
+                dateTimePicker.find_element(By.CLASS_NAME, EditEventScreen.Classes.DATETIME_PICKER_PREV).click()
         
         logging.info("EditEventScren: Picking day %d from year month", time.day)
         tdElements = dateTimePicker.find_elements(By.TAG_NAME, "td")
@@ -263,13 +279,40 @@ class EditEventScreen(Screen):
         # Get rid of leading 0
         if hourStr[0] == '0':
             hourStr = hourStr[1:]
-        className = f"hour hour_{"am" if isAM else "pm"}"
-        spanElems = dateTimePicker.find_elements(By.CLASS_NAME, className)
+        amOrPm = f"hour_{'am' if isAM else 'pm'}"
+        spanElems = dateTimePicker.find_elements(By.XPATH, f"//span[contains(@class, 'hour') and contains(@class,'{amOrPm}')]")
         foundHour = False
         for spanElem in spanElems:
             if spanElem.text == hourStr:
                 foundHour = True
                 spanElem.click()
+                break
+        if not foundHour:
+            logging.error("EditEventScreen: Couldn't find hour %s", hourStr)
+            raise Exception("Couldn't find hour")
+
+        hourAndMinStr = hourStr
+        if time.minute < 15:
+            hourAndMinStr += ":00"
+        elif time.minute < 30:
+            hourAndMinStr += ":15"
+        elif time.minute < 45:
+            hourAndMinStr += ":30"
+        else:
+            hourAndMinStr += ":45"
+        logging.info("EditEventScreen: Selecting minute for %s, choosing closest 15min before which is %s", str(time.minute), hourAndMinStr)
+        spanElems = dateTimePicker.find_elements(By.XPATH, f"//span[contains(@class, 'minute')]")
+        foundMinute = False
+        for spanElem in spanElems:
+            if spanElem.text == hourAndMinStr:
+                foundMinute = True
+                spanElem.click()
+                break
+        if not foundMinute:
+            logging.error("EditEventScreen: Couldn't find minute %s", hourAndMinStr)
+            raise Exception("Couldn't find minute")
+        
+        logging.info("EditEventScreen: Done filling out date picker for %s", str(time))
 
 
         
@@ -294,25 +337,97 @@ class EditEventScreen(Screen):
         Utils.typeTextIntoElement(self._descriptionInputBox(), eventInfo.description)
 
         logging.info("EditEventScreen: Setting State to %s", eventInfo.state)
-        stateSelectDropdown = self._stateInputDropdown()
-        stateSelectDropdown.selectByValue(eventInfo.state)
+        stateSelectDropdown = selenium.webdriver.support.select.Select(self._stateInputDropdown())
+        stateSelectDropdown.select_by_value(eventInfo.state)
 
         logging.info("EditEventScreen: Setting Country to %s", eventInfo.country)
-        countrySelectDropdown = self._countryInputDropdown()
-        countrySelectDropdown.selectByValue(eventInfo.country)
+        countrySelectDropdown = selenium.webdriver.support.select.Select(self._countryInputDropdown())
+        countrySelectDropdown.select_by_value(eventInfo.country)
 
         logging.info("EditEventScreen: Setting start date to %s", str(eventInfo.startTime))
         self._startDateInputBox().click()
-        self._fillOutDatePicker(eventInfo.startTime)
+        self._fillOutDatePicker(eventInfo.startTime, self._startDateTimePicker())
 
         if eventInfo.endTime is not None:
             logging.info("EditEventScreen: Setting end date to %s", str(eventInfo.endTime))
             self._hasEndTimeICheckBox().click()
             self._endDateInputBox().click()
-            self._fillOutDatePicker(eventInfo.endTime)
+            self._fillOutDatePicker(eventInfo.endTime, self._endDateTimePicker())
 
     def goToNextStep(self):
         self._nextStepButton().click()
+
+class EditEventThankYouScreen(Screen):
+    class TEXTS:
+        INSTRUCTIONS = "Instructions For Your Attendees"
+    
+    class IDs:
+        # The actual text area isn't editable as it is hidden. I don't like using this id since it looks auto-generated and therefore could become useless but works for now
+        INSTRUCTIONS_INPUT = "redactor-uuid-0"#"event-description"
+        PUBLISH_BUTTON = "event-publish_link_button"
+    
+    def _publishButton(self):
+        return self.driver.find_element(By.ID, EditEventThankYouScreen.IDs.PUBLISH_BUTTON)
+    
+    def _instructionsInputBox(self):
+        return self.driver.find_element(By.ID, EditEventThankYouScreen.IDs.INSTRUCTIONS_INPUT)
+
+    def exists(self) -> bool:
+        h3s = self.driver.find_elements(By.TAG_NAME, "h3")
+        found = False
+        for h3 in h3s:
+            if h3.text.lower() == EditEventThankYouScreen.TEXTS.INSTRUCTIONS.lower():
+                found = True
+                break
+        if not found: 
+            logging.error("EditEventThankYouScreen: Couldn't find instructions text")
+            return False
+        try:
+            _ = self._publishButton()
+            _ = self._instructionsInputBox()
+            return True
+        except Exception as e:
+            logging.info("EditEventThankYouScreen: Does not exist %s", str(e))
+            return False
+    
+    def addInstructions(self,text: str):
+        Utils.typeTextIntoElement(self._instructionsInputBox(), text)
+
+    def publishEvent(self):
+        self._publishButton().click()
+
+class EventConfirmationScreen(Screen):
+    class TEXTS:
+        CURRENTLY_MANAGING = "Currently Managing:" 
+    
+    class NAMES:
+        DIRECT_LINK = "event-share_link"
+    
+    def _directLinkBox(self):
+        return self.driver.find_element(By.NAME, EventConfirmationScreen.NAMES.DIRECT_LINK)
+
+    def exists(self) -> bool:
+        h6s = self.driver.find_elements(By.TAG_NAME, "h6")
+        found = False
+        for h6 in h6s:
+            if h6.text.lower() == EventConfirmationScreen.TEXTS.CURRENTLY_MANAGING.lower():
+                found = True
+                break
+        if not found: 
+            logging.error("EventConfirmationScreen: Couldn't find currently managing text text")
+            return False
+        try:
+            _ = self._directLinkBox()
+            return True
+        except Exception as e:
+            logging.info("EventConfirmationScreen: Does not exist %s", str(e))
+            return False
+    
+    def getManagerLink(self) -> str:
+        return str(self.driver.current_url)
+    
+    def getDirectLink(self) -> str:
+        return self._directLinkBox().get_attribute("value")
 
 class ANAutomator:
 
@@ -327,8 +442,8 @@ class ANAutomator:
         loginScreen = LoginScreen.tryToCreate(driver)
         if loginScreen is not None:
             logging.info("ANAutomator: LoginScreen detected, logging in")
-            loginScreen.login(email=email, password=password)
-
+            loginScreen.login(email=email, password=password)        
+        
         dashboardScreen = DashboardScreen.tryToCreate(driver)
         if dashboardScreen is None:
             logging.error("ANAutomator: Can't find dashboard screen")
@@ -344,10 +459,28 @@ class ANAutomator:
         logging.info("ANAutomator: Filling out event info")
         editEventScreen.fillOutEventInfo(eventInfo)
 
-        logging.info("ANAutomator: Moving to action confirmation screen")
+        logging.info("ANAutomator: Moving to action thank you screen")
         editEventScreen.goToNextStep()
 
-        time.sleep(5)
+        editEventThankYouScreen = EditEventThankYouScreen.tryToCreate(driver)
+        if editEventThankYouScreen is None:
+            logging.error("ANAutomator: Can't find edit event thank you screen")
+            raise Exception("Not in edit event thank you screen")
+        logging.info("ANAutomator: Filling out edit event thank you screen")
+        editEventThankYouScreen.addInstructions(eventInfo.insturctions)
+
+        logging.info("ANAutomator: Publishing Event")
+        editEventThankYouScreen.publishEvent()
+
+        eventConfirmationScreen = EventConfirmationScreen.tryToCreate(driver)
+        if eventConfirmationScreen is None:
+            logging.error("ANAutomator: Can't find event confirmation screen")
+            raise Exception("Not in event confrimation screen")
+        logging.info("ANAutomator: Getting Event info")
+        eventConfirmInfo = EventConfirmationInfo(eventConfirmationScreen.getManagerLink(), eventConfirmationScreen.getDirectLink())
+
+        logging.info("ANAutomator: Done creating event, returning info %s", str(eventConfirmInfo))
+        return eventConfirmInfo
         
 
 
