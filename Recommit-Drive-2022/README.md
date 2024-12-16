@@ -20,4 +20,4 @@ If another reccommitment drive occurs these tools can be reused or modified to f
 
 ## Outputs
 
-Note that none of the scripts take output paths as arguments at this time. They have hardcoded output paths to the recommit directory. These paths can be found in `ReccommitUtils.py`. 
+Note that none of the scripts take output paths as arguments at this time. They have hardcoded output paths to the recommit directory. These paths can be found in `ReccommitUtils.py`.
