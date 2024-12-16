@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Editors
+.vscode/
+
+# Mac/OSX
+.DS_Store
+
+# Windows
+Thumbs.db
+
