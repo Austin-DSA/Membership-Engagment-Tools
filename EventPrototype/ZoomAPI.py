@@ -6,6 +6,7 @@ import datetime
 import logging
 import base64
 import pytz
+import requests.auth
 
 # MARK: Constants
 
@@ -63,6 +64,12 @@ class Constants:
         RESPONSE_ID_KEY = "id"
         RESPONSE_START_TIME_KEY = "start_time"
         RESPONSE_TIMEZONE_KEY = "timezone"
+        RESPONSE_TYPE_KEY = "type"
+
+        TYPE_INSTANT = 1
+        TYPE_SCHEDULED = 2
+        TYPE_RECURRING_NO_FIXED = 3
+        TYPE_RECURRING_FIXED = 8
 
         
 
@@ -94,7 +101,6 @@ class ZoomUser:
     status: str
     features: Features = None
 
-#TODO: Test to see if we need to include type
 @dataclasses.dataclass
 class ZoomMeeting:
     id : str
@@ -112,9 +118,8 @@ class ZoomAPI:
         self._accountId = accountId
         self._clientId = clientId
         self._clientSecret = clientSecret
-        # Set token expire to the past, API calls will will check if we have a valid token and then refresh
-        self._tokenExpireTime = datetime.datetime.now()
         self._accessToken = None
+        self._cachedAccounts = None
 
 # MARK: Utilities
 
@@ -126,13 +131,13 @@ class ZoomAPI:
     # Shouldn't call on these directly instead use _accessTokenRequired as a decorator
     def _refreshAccessToken(self) -> None:
         logging.info("ZoomAPI: Refreshing Access Token")
-        authSecretsBase64 = base64.standard_b64encode(f"{self._clientId}:{self._clientSecret}")
-        headers = {Constants.AUTH_HEADER_KEY : f"Basic {authSecretsBase64}"}
+        authSecretsBase64 = base64.standard_b64encode(f"{self._clientId}:{self._clientSecret}".encode())
+        auth = requests.auth.HTTPBasicAuth(self._clientId,self._clientSecret)
         body = {
             Constants.AccessToken.GRANT_TYPE_KEY : Constants.AccessToken.GRANT_TYPE,
             Constants.AccessToken.ACCOUNT_ID_KEY : self._accountId
             }
-        req = requests.post(url=Constants.AccessToken.OAUTH_ENDPOINT, headers=headers, data=body)
+        req = requests.post(url=Constants.AccessToken.OAUTH_ENDPOINT, data=body, auth=auth)
         req.raise_for_status()
         responseDict = req.json()
         self._accessToken = AccessToken(
@@ -148,11 +153,11 @@ class ZoomAPI:
     # If the token exists and is within its lifetime it is valid
     # Count being close to the access time as invalid to reduce chance of expiring happening during a critical section
     def _isAccessTokenValid(self) -> None:
-        return self._accessToken is not None and datetime.datetime.now() < (self._tokenExpireTime - datetime.timedelta(minutes=2))
+        return self._accessToken is not None and datetime.datetime.now() < (self._accessToken.expireTime - datetime.timedelta(minutes=2))
 
     @staticmethod
     def _accessTokenRequired(func):
-        def inner(self: ZoomAPI, *args, **kwargs):
+        def inner(self, *args, **kwargs):
             if not self._isAccessTokenValid():
                 logging.info("ZoomAPI: Access token invalid")
                 self._refreshAccessToken()
@@ -221,6 +226,12 @@ class ZoomAPI:
                 return []
             meetings = []
             for meeting in responseDict[Constants.Meetings.RESPONSE_MEETING_LIST_KEY]:
+                # We don't care about instant meetings or recurring meetings with no fixed time
+                meetingType = meeting[Constants.Meetings.RESPONSE_TYPE_KEY]
+                if meetingType == Constants.Meetings.TYPE_INSTANT or meetingType == Constants.Meetings.TYPE_RECURRING_NO_FIXED:
+                    logging.info("ZoomAPI: Found meeting %s that is type %d, has no scheduled time so skipping", meeting[Constants.Meetings.RESPONSE_TOPIC_KEY], meetingType)
+                    continue
+
                 startTime = datetime.datetime.fromisoformat(meeting[Constants.Meetings.RESPONSE_START_TIME_KEY])
                 startTime.replace(tzinfo=pytz.timezone(meeting[Constants.Meetings.RESPONSE_TIMEZONE_KEY]))
 
@@ -239,7 +250,7 @@ class ZoomAPI:
         meetings = []
         params = { Constants.Meetings.QUERY_PARAM_FROM_DATE : fromDate.isoformat(),
                    Constants.Meetings.QUERY_PARAM_TO_DATE : toDate.isoformat(),
-                   Constants.Meetings.QUERY_PARAM_TIMEZONE : fromDate.tzinfo.tzname(),
+                   Constants.Meetings.QUERY_PARAM_TIMEZONE : fromDate.tzinfo.tzname(fromDate),
                    Constants.Meetings.QUERY_PARAM_TYPE : Constants.Meetings.QUERY_PARAM_TYPE_UPCOMING}
         req = requests.get(Constants.Meetings.LIST_MEETING_ENDPOINT(account.id), headers=self._headersForRequest(), params=params)
         req.raise_for_status()
@@ -264,15 +275,15 @@ class ZoomAPI:
     # 0 - The account this record is for
     # 1 - List of conflicting meetings, if empty then account is available
     def getAccountsAndAvailablilityForTime(self, time: datetime.datetime, duration: datetime.timedelta) -> list[tuple[ZoomUser,list[ZoomMeeting]]]:
-        # Can't check for conflicts in the past nor schedule meetings
-        # Return false as if there is a conflict
-        if time < datetime.datetime.now():
-            logging.error("ZoomAPI: Passed in time %s that is in the past", str(time))
-            raise Exception(f"ZoomAPI: Passed in time {time} that is in the past") # ??
-        # Require timezone specific 
-        if time.tzinfo is None or time.tzinfo.utcoffset() is None:
+        # Require timezone aware objects 
+        if time.tzinfo is None or time.tzinfo.utcoffset(time) is None:
             logging.error("ZoomAPI: The argument for the start time must be timezone aware. Passed in unaware object.")
             raise Exception("ZoomAPI: The argument for the start time must be timezone aware. Passed in unaware object.")
+        # Can't check for conflicts in the past 
+        # Return false as if there is a conflict
+        if time < datetime.datetime.now(tz=time.tzinfo):
+            logging.error("ZoomAPI: Passed in time %s that is in the past", str(time))
+            raise Exception(f"ZoomAPI: Passed in time {time} that is in the past") # ??
         
         # Look for potential conflicts within 3 hours on each side
         logging.info("ZoomAPI: Check availability for meeting starting at %s for duration %s", time, duration)
