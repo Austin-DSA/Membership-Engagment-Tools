@@ -452,7 +452,7 @@ class ANAutomator:
         logging.info("ANAutomator: Starting Driver")
         options = selenium.webdriver.ChromeOptions()
         options.add_argument("--headless")
-        driver = selenium.webdriver.Chrome()
+        driver = selenium.webdriver.Chrome(options)
         driver.implicitly_wait(2)
         driver.get(DashboardScreen.Constants.AUSTIN_DSA_DASHBOARD)
 
