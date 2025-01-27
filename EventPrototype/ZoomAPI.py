@@ -47,7 +47,7 @@ class Constants:
             RESPONSE_MEETING_CAPACITY = "meeting_capacity"
     
     class Meetings:
-        def LIST_MEETING_ENDPOINT(userId: str) -> str:
+        def MEETING_ENDPOINT(userId: str) -> str:
             return f"https://api.zoom.us/v2/users/{userId}/meetings"
         
         QUERY_PARAM_FROM_DATE = "from"
@@ -70,6 +70,12 @@ class Constants:
         TYPE_SCHEDULED = 2
         TYPE_RECURRING_NO_FIXED = 3
         TYPE_RECURRING_FIXED = 8
+
+        CREATE_DURATION = "duration"
+        CREATE_START_TIME = "start_time"
+        CREATE_START_TIMEZONE = "timezone"
+        CREATE_TYPE = "type"
+        CREATE_TOPIC = "topic"
 
         
 
@@ -110,14 +116,20 @@ class ZoomMeeting:
     ownerUserId: str
     topic: str
 
-#TODO:Accounts - Handle Bad Responses gracefully
+@dataclasses.dataclass
+class ZoomConfig:
+    accountId: str
+    clientId: str
+    clientSecret: str
+
+#TODO: Handle Bad Responses gracefully
 
 class ZoomAPI:
 
-    def __init__(self, accountId: str, clientId: str, clientSecret: str) -> None:
-        self._accountId = accountId
-        self._clientId = clientId
-        self._clientSecret = clientSecret
+    def __init__(self, config : ZoomConfig) -> None:
+        self._accountId = config.accountId
+        self._clientId = config.clientId
+        self._clientSecret = config.clientSecret
         self._accessToken = None
         self._cachedAccounts = None
 
@@ -252,7 +264,7 @@ class ZoomAPI:
                    Constants.Meetings.QUERY_PARAM_TO_DATE : toDate.isoformat(),
                    Constants.Meetings.QUERY_PARAM_TIMEZONE : fromDate.tzinfo.tzname(fromDate),
                    Constants.Meetings.QUERY_PARAM_TYPE : Constants.Meetings.QUERY_PARAM_TYPE_UPCOMING}
-        req = requests.get(Constants.Meetings.LIST_MEETING_ENDPOINT(account.id), headers=self._headersForRequest(), params=params)
+        req = requests.get(Constants.Meetings.MEETING_ENDPOINT(account.id), headers=self._headersForRequest(), params=params)
         req.raise_for_status()
         responseDict = req.json()
         meetings.extend(processJsonResponIntoMeetings(responseDict=responseDict))
@@ -260,7 +272,7 @@ class ZoomAPI:
         while Constants.NEXT_PAGE_TOKEN_KEY in responseDict and responseDict[Constants.NEXT_PAGE_TOKEN_KEY] != "":
             logging.info("ZoomAPI: Moving onto next page of meeting list")
             params[Constants.NEXT_PAGE_TOKEN_KEY] = responseDict[Constants.NEXT_PAGE_TOKEN_KEY]
-            req = requests.get(Constants.Meetings.LIST_MEETING_ENDPOINT(account.id), headers=self._headersForRequest(), params=params)
+            req = requests.get(Constants.Meetings.MEETING_ENDPOINT(account.id), headers=self._headersForRequest(), params=params)
             req.raise_for_status()
             responseDict = req.json()
             meetings.extend(processJsonResponIntoMeetings(responseDict=responseDict))
@@ -309,6 +321,27 @@ class ZoomAPI:
             results.append((account,confirmedConflicts))
         logging.info("ZoomAPI: Done checking availability")
         return results
+    
+    @_accessTokenRequired
+    def createMeeting(self, title: str, start: datetime.datetime, duration: datetime.timedelta, user: ZoomUser) -> str:
+        if start.tzinfo is None or start.tzinfo.utcoffset(start) is None:
+            logging.error("ZoomAPI: The argument for the start time must be timezone aware. Passed in unaware object.")
+            raise Exception("ZoomAPI: The argument for the start time must be timezone aware. Passed in unaware object.")
+        logging.info("ZoomAPI: Creating meeting %s at %s that lasts %s for user %s", title, str(time), str(duration), user.email)
+        # headers = self._headersForRequest()
+        # headers[Content-Type: application/json]
+        req = requests.post(Constants.Meetings.MEETING_ENDPOINT(user.id), headers=self._headersForRequest(), json={
+            Constants.Meetings.CREATE_TOPIC : title,
+            Constants.Meetings.CREATE_START_TIME : start.isoformat(),
+            Constants.Meetings.CREATE_START_TIMEZONE : start.tzinfo.tzname(start),
+            Constants.Meetings.CREATE_DURATION : duration.seconds//60,
+            Constants.Meetings.CREATE_TYPE : Constants.Meetings.TYPE_SCHEDULED
+        })
+        req.raise_for_status()
+        logging.info("ZoomAPI: Created meeting")
+        return req.json()[Constants.Meetings.RESPONSE_JOIN_URL_KEY]
+
+
 
 
 

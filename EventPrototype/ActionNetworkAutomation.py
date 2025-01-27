@@ -2,12 +2,12 @@ import selenium
 import selenium.webdriver
 import selenium.webdriver.common
 from selenium.webdriver.common.by import By
-import time
 import dataclasses
 import datetime
 import typing
 import abc
 import logging
+import tzlocal
 
 import selenium.webdriver.support
 import selenium.webdriver.support.select
@@ -30,6 +30,11 @@ class EventInfo:
 class EventConfirmationInfo:
     manageLink : str
     directLink : str
+
+@dataclasses.dataclass
+class ANAutomatorConfig:
+    email: str
+    password: str
 
 class Utils:
 
@@ -432,9 +437,22 @@ class EventConfirmationScreen(Screen):
 class ANAutomator:
 
     @classmethod
-    def createEvent(self, eventInfo: EventInfo, email: str, password: str):
+    def createEvent(self, eventInfo: EventInfo, config: ANAutomatorConfig) -> EventConfirmationInfo:
+        # AN uses local time for the page
+        # We need to convert the incoming time into the local timezone of this machine, and then make it timezone naiive
+        localTimezone = tzlocal.get_localzone()
+        localizedStart = eventInfo.startTime.astimezone(localTimezone)
+        localizedEnd = eventInfo.endTime.astimezone(localTimezone)
+        # make naiive since we will be generating many datetimes for comparison later and we can't compare tz aware vs non-aware objects
+        noTzStart = localizedStart.replace(tzinfo=None)
+        noTzEnd = localizedEnd.replace(tzinfo=None)
+        eventInfo.startTime = noTzStart
+        eventInfo.endTime = noTzEnd
+        
         logging.info("ANAutomator: Starting Driver")
-        driver = selenium.webdriver.Edge()
+        options = selenium.webdriver.ChromeOptions()
+        options.add_argument("--headless")
+        driver = selenium.webdriver.Chrome()
         driver.implicitly_wait(2)
         driver.get(DashboardScreen.Constants.AUSTIN_DSA_DASHBOARD)
 
@@ -442,7 +460,7 @@ class ANAutomator:
         loginScreen = LoginScreen.tryToCreate(driver)
         if loginScreen is not None:
             logging.info("ANAutomator: LoginScreen detected, logging in")
-            loginScreen.login(email=email, password=password)        
+            loginScreen.login(email=config.email, password=config.password)        
         
         dashboardScreen = DashboardScreen.tryToCreate(driver)
         if dashboardScreen is None:
