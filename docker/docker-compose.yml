@@ -1,19 +1,31 @@
-version: "3.9"
+version: "3.8"
 
 services:
-  postgres:
-    image: postgres
-    env_file:
-      - .env
-
-  django:
-    build: .
-    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+  ListManagement:
+    build:
+      context: ../ListManagement  
+      dockerfile: Dockerfile
     volumes:
-      - .:/code
+      - ../ListManagement:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=ListManagement.settings
     ports:
       - "8000:8000"
-    depends_on:
-      - postgres
-    env_file:
-      - .env
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+  
+  Recommit-Drive-2022:
+    build:
+      context: ../Recommit-Drive-2022
+      dockerfile: Dockerfile
+    volumes:
+      - ../Recommit-Drive-2022:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=Recommit-Drive-2022.settings
+    ports:
+      - "8000:8000"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+  
+  postgres:
+    image: postgres
+    environment:
+      - postgres.env
