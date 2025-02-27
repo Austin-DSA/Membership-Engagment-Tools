@@ -18,6 +18,3 @@ COPY . /app/
 
 # Expose port 8000 for Django development server
 EXPOSE 8000
-
-# Define the default command to run when the container starts
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
