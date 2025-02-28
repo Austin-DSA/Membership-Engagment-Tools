@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  ListManagement:
+  list_management:
     build:
       context: ../ListManagement  
       dockerfile: Dockerfile
@@ -13,19 +13,15 @@ services:
       - "8000:8000"
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
   
-  Recommit-Drive-2022:
+  recommit_drive_2022:
     build:
       context: ../Recommit-Drive-2022
       dockerfile: Dockerfile
     volumes:
       - ../Recommit-Drive-2022:/app
-    environment:
-      - DJANGO_SETTINGS_MODULE=Recommit-Drive-2022.settings
     ports:
       - "8000:8000"
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
   
   postgres:
     image: postgres
-    environment:
-      - postgres.env
