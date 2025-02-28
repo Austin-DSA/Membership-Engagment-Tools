@@ -4,7 +4,7 @@ services:
   list_management:
     build:
       context: ../ListManagement  
-      dockerfile: Dockerfile
+      dockerfile: ../docker/Dockerfile
     volumes:
       - ../ListManagement:/app
     environment:
@@ -16,7 +16,7 @@ services:
   recommit_drive_2022:
     build:
       context: ../Recommit-Drive-2022
-      dockerfile: Dockerfile
+      dockerfile: ../docker/Dockerfile
     volumes:
       - ../Recommit-Drive-2022:/app
     ports:

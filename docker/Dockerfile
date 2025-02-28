@@ -7,14 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy requirements file first to install dependencies early and take advantage of Docker layer caching
-COPY requirements.txt /app/
+# Copy the application into the container
+COPY . /app/
 
 # Install any required dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application into the container
-COPY . /app/
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
 
 # Expose port 8000 for Django development server
 EXPOSE 8000
