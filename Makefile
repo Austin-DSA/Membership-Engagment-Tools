@@ -1,7 +1,7 @@
 # Define variables for each project
-PROJECTS := ListManagement Recommit-Drive-2022
+PROJECTS := list_management recommit_drive_2022
 
-DEFAULT_PROJECT := ListManagement
+DEFAULT_PROJECT := list_management
 
 # Help target to show available make commands
 help:
@@ -15,18 +15,18 @@ build:
 	@if [ -z "$(PROJECT)" ]; then \
 		PROJECT=$(DEFAULT_PROJECT); \
 	fi
-	@docker-compose -f docker/docker-compose.yml build
+	@docker-compose -f docker/docker-compose.yml build $(PROJECT)
 
 # Up target (start the container)
 start:
 	@if [ -z "$(PROJECT)" ]; then \
 		PROJECT=$(DEFAULT_PROJECT); \
 	fi
-	@docker-compose -f docker/docker-compose.yml up
+	@docker-compose -f docker/docker-compose.yml up $(PROJECT)
 
 # Down target (stop the container)
 stop:
 	@if [ -z "$(PROJECT)" ]; then \
 		PROJECT=$(DEFAULT_PROJECT); \
 	fi
-	@docker-compose -f docker/docker-compose.yml down
+	@docker-compose -f docker/docker-compose.yml down $(PROJECT)

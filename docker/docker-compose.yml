@@ -1,14 +1,12 @@
-version: "3.8"
-
 services:
   list_management:
     build:
       context: ../ListManagement  
       dockerfile: ../docker/Dockerfile
+    depends_on:
+      - postgres
     volumes:
       - ../ListManagement:/app
-    environment:
-      - DJANGO_SETTINGS_MODULE=ListManagement.settings
     ports:
       - "8000:8000"
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
@@ -17,6 +15,8 @@ services:
     build:
       context: ../Recommit-Drive-2022
       dockerfile: ../docker/Dockerfile
+    depends_on:
+      - postgres
     volumes:
       - ../Recommit-Drive-2022:/app
     ports:
