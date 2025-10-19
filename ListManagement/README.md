@@ -1,5 +1,7 @@
 # List Upload and Management Tools
 
+# Automatic Membership Upload Script
+
 ## Description
 
 This script is designed to automate the processing of membership lists from the Democratic Socialists of America (DSA) for the Austin DSA chapter.
@@ -71,3 +73,24 @@ Can validate a vote table based off a given membership list. May require changes
 ### Utils.py
 
 Various utils used by all other files.
+
+# Process Open Slide list
+ 
+## Description
+
+This script it too process an openslides list for a new meeting. This is to stop open slides from creating unnecessary new accounts.
+
+You will need to download the last the meeting membership list via "export" in participants. Export with the comma delimiter (export settings).
+You will also need to download the list from the AN report "Members For OpenSlides"
+
+## Prerequisites
+
+- Python 3.x installed
+
+## Usage
+
+Run the script with Python, and pass in the previous list with `-p`, the AN list with `-m` and the desired output path with `-o`.
+
+```bash
+python 
+```
