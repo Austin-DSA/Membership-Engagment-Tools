@@ -1,0 +1,27 @@
+services:
+  list_management:
+    build:
+      context: ../ListManagement  
+      dockerfile: ../docker/Dockerfile
+    depends_on:
+      - postgres
+    volumes:
+      - ../ListManagement:/app
+    ports:
+      - "8000:8000"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+  
+  recommit_drive_2022:
+    build:
+      context: ../Recommit-Drive-2022
+      dockerfile: ../docker/Dockerfile
+    depends_on:
+      - postgres
+    volumes:
+      - ../Recommit-Drive-2022:/app
+    ports:
+      - "8000:8000"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+  
+  postgres:
+    image: postgres
