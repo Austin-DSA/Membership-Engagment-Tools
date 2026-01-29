@@ -15,7 +15,7 @@ class Constants:
         FIRST_NAME = "first_name"
         MIDDLE_NAME = "middle_name"
         LAST_NAME = "last_name"
-        STANDING_COL = "membership_status"
+        STANDING_COL = "actionkit_is_member_in_good_standing"
         EMAIL_COL = "email"
 
         # One of the following two will exist
@@ -45,7 +45,7 @@ class Constants:
 
     class MEMBERSHIP_STATUS:
         LAPSED = "lapsed"
-        GOOD_STANDING = "member in good standing"
+        GOOD_STANDING = "true"
         MEMBER = "member"
 
 

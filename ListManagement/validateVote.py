@@ -186,6 +186,7 @@ def main(args):
             if vote.vote == Constants.VOTE_TYPES.ABSTAIN:
                 numAbstain += 1
         if not vote.found:
+            print(f"did not find member for email {vote.email}")
             vote.status = "Not in list"
         outputRows.append(vote.toRow())
 
