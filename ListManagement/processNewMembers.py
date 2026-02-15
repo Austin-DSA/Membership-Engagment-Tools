@@ -35,6 +35,8 @@ class Constants:
         "TECH": "tech@austindsa.org",
     }
 
+    JUNK_EMAIL_DOMAINS = ['example.com']
+
     MEMBERSHIP_LIST_DOWNLOAD_EMAIL = "no-reply@actionkit.com"
 
     LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.txt"
@@ -223,12 +225,12 @@ def setup():
         format="%(asctime)s : %(levelname)s : %(message)s",
     )
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-    logging.info("Starting membership list processing")
+    logging.info(f"Starting membership list processing")
 
 
 def setupEmail() -> EmailAPI.EmailAccount:
-    logging.info("Setting up email account")
-    logging.info("Reading from email")
+    logging.info(f"Setting up email account")
+    logging.info(f"Reading from email")
     mailUsername = None
     mailPassword = None
     with open(Constants.EMAIL_CREDS, "r", encoding="UTF-8") as creds:
@@ -236,15 +238,20 @@ def setupEmail() -> EmailAPI.EmailAccount:
         mailUsername = lines[0].strip()
         mailPassword = lines[1].strip()
     if mailUsername is None or mailPassword is None:
-        logging.error("Couldn't read email credentials")
-        raise MembershipListProcessingException("Couldn't read email credentials")
+        logging.error(f"Couldn't read email credentials")
+        raise MembershipListProcessingException(f"Couldn't read email credentials")
     emailAccount = EmailAPI.EmailAccount(mailUsername, mailPassword)
     return emailAccount
 
 
+def getEmails(emailAccount: EmailAPI.EmailAccount) -> str:
+    emailAccount.get_emails()
+
+
 def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
+
     if os.path.exists(Constants.DOWNLOAD_ZIP_PATH):
-        logging.info("Found old downloaded zip file, deleting")
+        logging.info(f"Found old downloaded zip file, deleting")
         os.remove(Constants.DOWNLOAD_ZIP_PATH)
 
     emailAccount.downloadZipAttachmentFromMostRecentUnreadEmail(
@@ -256,10 +263,10 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
     )
 
     if os.path.exists(Constants.DOWNLOAD_LIST_PATH):
-        logging.info("Found old downloaded list, deleting")
+        logging.info(f"Found old downloaded list, deleting")
         os.remove(Constants.DOWNLOAD_LIST_PATH)
 
-    logging.info("Unzipping downloaded list to %s", Constants.DOWNLOAD_LIST_PATH)
+    logging.info(f"Unzipping downloaded list to {Constants.DOWNLOAD_LIST_PATH}")
     with zipfile.ZipFile(Constants.DOWNLOAD_ZIP_PATH) as downloadedZip:
         downloadedZip.extract(
             Constants.DOWNLOAD_ZIP_LIST_MEMBER, path=Constants.WORKING_DIR
@@ -270,10 +277,10 @@ def dowloadMembershipListFromEmail(emailAccount: EmailAPI.EmailAccount) -> str:
 def readMembershipList(path: str) -> (list, list):
     logging.info("Reading membership list from %s", path)
     if not os.path.exists(path):
-        logging.error("Input file DNE %s", path)
+        logging.error(f"Input file DNE {path}")
         raise MembershipListProcessingException(f"Input file DNE {path}")
     if not path.endswith("csv"):
-        logging.error("File is not csv %s", path)
+        logging.error(f"File is not csv {path}")
         raise MembershipListProcessingException(f"File is not csv {path}")
 
     # Save member counts to aggregate tracker
@@ -361,11 +368,15 @@ def processRetentionData(
             membersMember += 1
         elif status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
             membersLapsed += 1
-        else:
-            logging.error("Found unexpected membership status: %s", status)
-            raise MembershipListProcessingException(
-                f"Found unexpected membership status: {status}"
-            )
+        # column 'yearly_dues_status' can be blank  note by #mbf
+        # prior code had else for an unknown data type. Only checking 3 types of member status
+        # only counting those types of status. Would not need to know about blank members
+        # else:
+        #     logging.error("Found unexpected membership status: %s", status)
+        #     logging.error(f"ROW: {row}")
+        #     raise MembershipListProcessingException(
+        #         f"Found unexpected membership status: '{status}'"
+        #     )
     if flags.useLocalRetention and not flags.automateGoogleDrive:
         Utils.appendCSVFile(
             Constants.RETENTION_DATA_FILE_PATH,
@@ -397,7 +408,7 @@ def uploadToActionNetwork(
     # For non-automated will keep the conversion, but our columns include spaces and capital letters
     # The API connector will auto-lowercase
     # We shouldn't lose any columns but we may have duplicates
-    logging.info("Uploading members to action network")
+    logging.info(f"Uploading members to action network")
     # A bit redundant to build this map but it will make building the person more convient later
     # Also redundant to look up the col in the colToIndex map later when building people, but our col list length is small enough the simplicity and convience is worthwhile
     colToIndex = {}
@@ -429,76 +440,82 @@ def uploadToActionNetwork(
                 continue
             customFields[col] = row[colToIndex[col]]
 
-        peopleToPost.append(
-            ActionNetworkAPI.Person(
-                firstName=row[
-                    colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]
-                ],
-                lastName=row[
-                    colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]
-                ],
-                email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
-                phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
-                customFields=customFields,
-                address=ActionNetworkAPI.PersonAddress(
-                    region=row[
-                        Utils.getValueWithAnyName(
-                            colToIndex,
-                            [
-                                Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE,
-                                Utils.Constants.MEMBERSHIP_LIST_COLS.STATE,
-                            ],
-                        )
+        temp_email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]]
+        temp_domain = temp_email.split('@')[-1]
+        # skip known junk domains. Gives HTTP 500 error by ActionNetwork
+        if temp_domain in Constants.JUNK_EMAIL_DOMAINS:
+            loggin.info(f"Skipping {temp_email} (Junk Domain: {temp_domain})")
+        else:
+            peopleToPost.append(
+                ActionNetworkAPI.Person(
+                    firstName=row[
+                        colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.FIRST_NAME]
                     ],
-                    zip_code=row[
-                        Utils.getValueWithAnyName(
-                            colToIndex,
-                            [
-                                Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL,
-                                Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
-                            ],
-                        )
+                    lastName=row[
+                        colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]
                     ],
-                    city=row[
-                        Utils.getValueWithAnyName(
-                            colToIndex,
-                            [
-                                Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY,
-                                Utils.Constants.MEMBERSHIP_LIST_COLS.CITY,
-                            ],
-                        )
-                    ],
-                    address_lines=[
-                        row[
+                    email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
+                    phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
+                    customFields=customFields,
+                    address=ActionNetworkAPI.PersonAddress(
+                        region=row[
                             Utils.getValueWithAnyName(
                                 colToIndex,
                                 [
-                                    Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1,
-                                    Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
+                                    Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_STATE,
+                                    Utils.Constants.MEMBERSHIP_LIST_COLS.STATE,
                                 ],
                             )
                         ],
-                        row[
+                        zip_code=row[
                             Utils.getValueWithAnyName(
                                 colToIndex,
                                 [
-                                    Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2,
-                                    Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
+                                    Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL,
+                                    Utils.Constants.MEMBERSHIP_LIST_COLS.ZIP_COL2,
                                 ],
                             )
                         ],
-                    ],
-                ),
+                        city=row[
+                            Utils.getValueWithAnyName(
+                                colToIndex,
+                                [
+                                    Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_CITY,
+                                    Utils.Constants.MEMBERSHIP_LIST_COLS.CITY,
+                                ],
+                            )
+                        ],
+                        address_lines=[
+                            row[
+                                Utils.getValueWithAnyName(
+                                    colToIndex,
+                                    [
+                                        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_1,
+                                        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_1,
+                                    ],
+                                )
+                            ],
+                            row[
+                                Utils.getValueWithAnyName(
+                                    colToIndex,
+                                    [
+                                        Utils.Constants.MEMBERSHIP_LIST_COLS.MAILING_ADDRESS_2,
+                                        Utils.Constants.MEMBERSHIP_LIST_COLS.ADDRESS_2,
+                                    ],
+                                )
+                            ],
+                        ],
+                    ),
+                )
+            )
+        api = ActionNetworkAPI.ActionNetworkAPI(
+            apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(
+                os.path.join(os.path.dirname(__file__), "actionNetworkAPIKey.txt")
             )
         )
-    api = ActionNetworkAPI.ActionNetworkAPI(
-        apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(
-            os.path.join(os.path.dirname(__file__), "actionNetworkAPIKey.txt")
+        return api.postPeople(
+            people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing
         )
-    )
-    return api.postPeople(
-        people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing
-    )
 
 
 def main():
@@ -510,6 +527,8 @@ def main():
         inputFileName = flags.filename
         if flags.filename == "EMAIL":
             emailAccount = setupEmail()
+            # getEmails(emailAccount)
+
             inputFileName = dowloadMembershipListFromEmail(emailAccount)
 
         cols, rows = readMembershipList(inputFileName)
@@ -518,26 +537,26 @@ def main():
 
         googleDriveApi = None
         if flags.automateGoogleDrive:
-            logging.info("Setting up Google Drive API")
+            logging.info(f"Setting up Google Drive API")
             googleDriveApi = GoogleDriveAPI.GoogleDriveAPI()
 
         # Copy to archive
         if flags.archive:
             archiveAndObfuscate(cols, rows, googleDriveApi)
         else:
-            logging.info("Skipping Archiving")
+            logging.info(f"Skipping Archiving")
 
         if flags.retention:
             processRetentionData(cols, rows, flags, googleDriveApi)
         else:
-            logging.info("Skipping Retention")
+            logging.info(f"Skipping Retention")
 
         failedUploads = []
         # Create csv for action network
         if flags.actionNetwork:
             if not flags.automateActionNetwork:
                 # Just directly copy over, we no longer convert to special custom fields since it could create stale custom fields
-                logging.info("Creating action network upload file")
+                logging.info(f"Creating action network upload file")
                 Utils.writeCSVFile(
                     os.path.join(
                         Constants.OUTPUT_DIR_PATH,
@@ -550,13 +569,13 @@ def main():
                 failedUploads = uploadToActionNetwork(cols, rows, flags.useANBackground)
                 if len(failedUploads) > 0:
                     success = False
-                for (personText, errorText) in failedUploads:
+                for personText, errorText in failedUploads:
                     # Log twice to make it more obvious and easy to find by scrolling to end
                     logging.error(
                         "Failed to upload: %s because of %s", personText, errorText
                     )
         else:
-            logging.info("Skipping Action Network")
+            logging.info(f"Skipping Action Network")
 
         if emailAccount is not None:
             for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
@@ -576,17 +595,17 @@ def main():
                     )
 
     except Exception as err:
-        logging.error("Failed to process membership list due to error")
+        logging.error(f"Failed to process membership list due to error")
         logging.exception(err)
-        if emailAccount is not None:
-            emailAccount.markDownloadedEmailAsUnread()
-            for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
-                emailAccount.sendMessage(
-                    emailAddress,
-                    "Failed Membership Upload",
-                    f"Failed to upload membership script due to:\n {err}",
-                    [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
-                )
+        # if emailAccount is not None:
+        #     emailAccount.markDownloadedEmailAsUnread()
+        #     for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
+        #         emailAccount.sendMessage(
+        #             emailAddress,
+        #             "Failed Membership Upload",
+        #             f"Failed to upload membership script due to:\n {err}",
+        #             [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+        #         )
 
 
 if __name__ == "__main__":

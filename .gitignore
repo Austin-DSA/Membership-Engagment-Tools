@@ -12,3 +12,5 @@ __pycache__/
 # Windows
 Thumbs.db
 
+# temp files
+ListManagement/workingDir
