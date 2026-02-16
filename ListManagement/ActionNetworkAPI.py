@@ -6,6 +6,7 @@ import datetime
 import logging
 from tqdm import tqdm
 
+
 class Constants:
     # URLS
     API_ENTRY = "https://actionnetwork.org/api/v2/"
@@ -47,7 +48,7 @@ class Constants:
 
     # BACKOFF for 429 and 50x Errors
     # time in seconds
-    BIG_SLEEP = 2 
+    BIG_SLEEP = 2
     SMALL_SLEEP = 0.35
 
 
@@ -205,12 +206,16 @@ class ActionNetworkAPI:
                 try:
                     self._postPerson(person, useBackgroundProcessing)
                 except Exception as err:
-                    personText = f"({person.firstName}, {person.lastName}, {person.email})"
+                    personText = (
+                        f"({person.firstName}, {person.lastName}, {person.email})"
+                    )
                     errorText = f"{err}"
                     logging.error(
                         "Failed to upload: %s because of %s", personText, errorText
                     )
-                    tqdm.write(f"⚠️ Warning: {personText} failed to upload with {errorText}")
+                    tqdm.write(
+                        f"⚠️ Warning: {personText} failed to upload with {errorText}"
+                    )
                     failedUploads.append((personText, errorText))
                     # Sleep an extra few seconds to back off of server
                     time.sleep(Constants.BIG_SLEEP)

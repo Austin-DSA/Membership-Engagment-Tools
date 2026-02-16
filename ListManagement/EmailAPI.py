@@ -68,8 +68,10 @@ class EmailAccount:
             None if no email matches
         """
         max_email_num = 1
-        
-        status, search_data = self.mail.search(None, f'(FROM "{address}")', f'SUBJECT "{subjectContaining}"', "ALL")
+
+        status, search_data = self.mail.search(
+            None, f'(FROM "{address}")', f'SUBJECT "{subjectContaining}"', "ALL"
+        )
         mail_ids = search_data[0].split()
         message_id = mail_ids[-max_email_num:][::-1]
         status, message = self.mail.fetch(message_id[0], "(FLAGS RFC822)")
@@ -77,12 +79,14 @@ class EmailAccount:
         flags = message[0][0].decode()
         is_unread = "UNSEEN" in flags or "\\Seen" not in flags
 
-        if(is_unread):
+        if is_unread:
             raw_email = message[0][1]
             email_content = email.message_from_bytes(raw_email)
-            message_subject = email_content['Subject']
+            message_subject = email_content["Subject"]
 
-            email_attachments = email.message_from_bytes(raw_email, policy=policy.default)
+            email_attachments = email.message_from_bytes(
+                raw_email, policy=policy.default
+            )
             has_attachment = False
 
             # Now you can just do:
@@ -90,7 +94,7 @@ class EmailAccount:
                 filename = attachment.get_filename()
                 has_attachment = True
 
-            if email_content['Subject'] == subjectContaining and has_attachment:
+            if email_content["Subject"] == subjectContaining and has_attachment:
                 return raw_email
 
         else:
@@ -103,9 +107,9 @@ class EmailAccount:
 
             print(f"Subject: {msg['Subject']}")
             print(f"date:  {msg['Date']}")
-            date_string = msg['Date']
+            date_string = msg["Date"]
             dt = parsedate_to_datetime(date_string)
-            formatted_date = dt.strftime('%Y-%m-%d')
+            formatted_date = dt.strftime("%Y-%m-%d")
 
             print(f"message id: {msg['Message-ID'].strip()}")
             new_id = msg["Message-ID"].strip()
@@ -170,9 +174,9 @@ class EmailAccount:
 
             print(f"Subject: {msg['Subject']}")
             print(f"date:  {msg['Date']}")
-            date_string = msg['Date']
+            date_string = msg["Date"]
             dt = parsedate_to_datetime(date_string)
-            formatted_date = dt.strftime('%Y-%m-%d')
+            formatted_date = dt.strftime("%Y-%m-%d")
 
             print(f"message id: {msg['Message-ID'].strip()}")
             new_id = msg["Message-ID"].strip()
@@ -243,16 +247,13 @@ class EmailAccount:
                 with open(downloadPath, "wb") as f:
                     if isinstance(content, str):
                         f.write(
-                            content.encode(
-                                attachment.get_content_charset() or "utf-8"
-                            )
+                            content.encode(attachment.get_content_charset() or "utf-8")
                         )
                     else:
                         f.write(content)
 
                 print(f"Successfully downloaded: {filename}")
                 print(attachment.get_filename())
-
 
     def markDownloadedEmailAsUnread(self):
         self.mail.store(self.lastReturnedMessage, "-FLAGS", "\\Seen")
@@ -274,10 +275,10 @@ class EmailAccount:
             raise EmailApiException.NoUnreadRecentEnough("No unread message was found")
         if afterDate is not None:
             email_data = email.message_from_bytes(message)
-            date_string = email_data['Date']
+            date_string = email_data["Date"]
             email_date = parsedate_to_datetime(date_string)
-            
-            if (email_date < afterDate):
+
+            if email_date < afterDate:
                 raise EmailApiException.NoUnreadRecentEnough(
                     "No unread message was found recent enough"
                 )
