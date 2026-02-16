@@ -35,7 +35,7 @@ class Constants:
         "TECH": "tech@austindsa.org",
     }
 
-    JUNK_EMAIL_DOMAINS = ['example.com']
+    JUNK_EMAIL_DOMAINS = ["example.com"]
 
     MEMBERSHIP_LIST_DOWNLOAD_EMAIL = "no-reply@actionkit.com"
 
@@ -440,8 +440,8 @@ def uploadToActionNetwork(
                 continue
             customFields[col] = row[colToIndex[col]]
 
-        temp_email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]]
-        temp_domain = temp_email.split('@')[-1]
+        temp_email = row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]]
+        temp_domain = temp_email.split("@")[-1]
         # skip known junk domains. Gives HTTP 500 error by ActionNetwork
         if temp_domain in Constants.JUNK_EMAIL_DOMAINS:
             loggin.info(f"Skipping {temp_email} (Junk Domain: {temp_domain})")
@@ -454,7 +454,9 @@ def uploadToActionNetwork(
                     lastName=row[
                         colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.LAST_NAME]
                     ],
-                    email=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]],
+                    email=row[
+                        colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.EMAIL_COL]
+                    ],
                     phone=row[colToIndex[Utils.Constants.MEMBERSHIP_LIST_COLS.PHONE]],
                     customFields=customFields,
                     address=ActionNetworkAPI.PersonAddress(
