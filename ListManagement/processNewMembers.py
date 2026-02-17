@@ -550,7 +550,7 @@ def main():
                 failedUploads = uploadToActionNetwork(cols, rows, flags.useANBackground)
                 if len(failedUploads) > 0:
                     success = False
-                for (personText, errorText) in failedUploads:
+                for personText, errorText in failedUploads:
                     # Log twice to make it more obvious and easy to find by scrolling to end
                     logging.error(
                         "Failed to upload: %s because of %s", personText, errorText

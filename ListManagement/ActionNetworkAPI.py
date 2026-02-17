@@ -33,7 +33,7 @@ class Constants:
     # POST headers
     HEADER_CONTENT_TYPE = "Content-Type"
     HEADER_CONTENT_JSON = "application/json"
-    HEADER_API_KEY = "OSDI-API-Token"
+    HEADER_API_KEY = "OSDI-API-Token"  # pragma: allowlist secret
 
     # API Endpoint Keys
     API_PERSON_SIGNUP_HELPER_KEY = "osdi:person_signup_helper"
