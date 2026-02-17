@@ -27,7 +27,9 @@ class Constants:
 
     class IDs:
         RETENTION_ARCHIVE_FOLDER = "1iD0WtMeP9DvBA1HULJbWPRcLWKPddve-"
-        RETENTION_DATA_FILE = "1ORnCuXxm1eFXVtWfeEn9fsjY6Nd3N3Ld"  # pragma: allowlist secret
+        RETENTION_DATA_FILE = (
+            "1ORnCuXxm1eFXVtWfeEn9fsjY6Nd3N3Ld"  # pragma: allowlist secret
+        )
 
 
 CLIENT_SECRET = "./client_secret.json"  # pragma: allowlist secret

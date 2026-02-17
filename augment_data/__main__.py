@@ -79,8 +79,12 @@ webserver. Make sure you do not run this script on larger data sets without good
     if args.city:
         sources.append(austin_city_api.AustinCityDatasource())
     if args.geocodio:
-        sources.append(geocodio_api.GeocodioDatasource(key=args.geocodio_key, min_proportion=args.min_proportion))
-    
+        sources.append(
+            geocodio_api.GeocodioDatasource(
+                key=args.geocodio_key, min_proportion=args.min_proportion
+            )
+        )
+
     for row in data:
         address = assemble_address(row)
         logger.info(
@@ -99,7 +103,6 @@ webserver. Make sure you do not run this script on larger data sets without good
         writer.writerows(data)
 
     logger.info(f"Augmented data written to {args.output}")
-
 
 
 if __name__ == "__main__":

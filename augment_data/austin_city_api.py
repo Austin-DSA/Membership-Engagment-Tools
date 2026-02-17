@@ -1,7 +1,7 @@
 """
 An interface to the Austin City Council website as an API to retrieve council district information.
 
-*WARNING* This uses the Austin City website as a web API. This may be unreliable and could be viewed as a misuse of their 
+*WARNING* This uses the Austin City website as a web API. This may be unreliable and could be viewed as a misuse of their
 webserver. Make sure you do not run this script on larger data sets without good reason and without checking your arguments and inputs.
 """
 
