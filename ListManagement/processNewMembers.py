@@ -368,15 +368,6 @@ def processRetentionData(
             membersMember += 1
         elif status == Utils.Constants.MEMBERSHIP_STATUS.LAPSED:
             membersLapsed += 1
-        # column 'yearly_dues_status' can be blank  note by #mbf
-        # prior code had else for an unknown data type. Only checking 3 types of member status
-        # only counting those types of status. Would not need to know about blank members
-        # else:
-        #     logging.error("Found unexpected membership status: %s", status)
-        #     logging.error(f"ROW: {row}")
-        #     raise MembershipListProcessingException(
-        #         f"Found unexpected membership status: '{status}'"
-        #     )
     if flags.useLocalRetention and not flags.automateGoogleDrive:
         Utils.appendCSVFile(
             Constants.RETENTION_DATA_FILE_PATH,

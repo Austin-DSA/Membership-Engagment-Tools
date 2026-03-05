@@ -188,7 +188,6 @@ class ActionNetworkAPI:
         failedUploads = []
         numPeople = len(people)
         logger.info(f"NUM PEOPLE: {numPeople}")
-        currentPerson = 0
         with tqdm(total=numPeople, desc="Overall Progress", unit="person") as pbar:
             for person in people:
                 pbar.set_postfix_str(f"Current: {person.firstName} {person.lastName}")
@@ -228,8 +227,6 @@ class ActionNetworkAPI:
                     timeToSleep = 0.5 - timeInRequest.seconds
                     if timeToSleep > 0:
                         time.sleep(timeToSleep)
-                currentPerson += 1
-                print(f"PERSON# {currentPerson}")
                 pbar.update(1)
         return failedUploads
 
