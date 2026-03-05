@@ -187,7 +187,7 @@ class ActionNetworkAPI:
         # Upon failure a exception will be raised and assumed to kill the program
         failedUploads = []
         numPeople = len(people)
-        print(f"NUM PEOPLE: {numPeople}")
+        logger.info(f"NUM PEOPLE: {numPeople}")
         currentPerson = 0
         with tqdm(total=numPeople, desc="Overall Progress", unit="person") as pbar:
             for person in people:

@@ -104,26 +104,12 @@ class EmailAccount:
 
             # Use email.utils to handle the "From" header cleanly
             name, addr = parseaddr(msg["From"])
-
-            print(f"Subject: {msg['Subject']}")
-            print(f"date:  {msg['Date']}")
             date_string = msg["Date"]
             dt = parsedate_to_datetime(date_string)
             formatted_date = dt.strftime("%Y-%m-%d")
-
-            print(f"message id: {msg['Message-ID'].strip()}")
             new_id = msg["Message-ID"].strip()
             new_id = new_id.split("<")[1].split("@")[0]
-            print(f"new id: {new_id}")
-            print(f"From: {name} <{addr}>")
-            print(f"content type: {msg.get_content_type()}")
-            print(f"charset: {msg.get_content_charset()}")
             has_attachment = False
-            # for part in msg.walk():
-            #     # If the part has a filename, it's an attachment
-            #     if part.get_filename():
-            #         has_attachment = True
-            #         print(f"Found attachment: {part.get_filename()}")
             msg = email.message_from_bytes(raw_email, policy=policy.default)
 
         # # Apparently Gmail doesn't support SORT so we will collect all our emails and sort them
@@ -152,7 +138,13 @@ class EmailAccount:
         #     return None
 
     def get_emails(self):
+        """
+        Primarily used for debugging reading the emails from mailbox. Add print or logger.info() for testing
 
+        Parameters: none (self)
+
+        Returns: none, writes contents to a file for debugging.
+        """
         max_email_num = 10
         status, search_data = self.mail.search(None, "ALL")
         mail_ids = search_data[0].split()
@@ -163,7 +155,6 @@ class EmailAccount:
             status, data = self.mail.fetch(m_id, "(FLAGS RFC822)")
             flags = data[0][0].decode()
             is_unread = "UNSEEN" in flags or "\\Seen" not in flags
-            print(f"Is Unread: {is_unread}")
 
             # Parse the raw bytes into an Email object
             raw_email = data[0][1]
@@ -172,40 +163,21 @@ class EmailAccount:
             # Use email.utils to handle the "From" header cleanly
             name, addr = parseaddr(msg["From"])
 
-            print(f"Subject: {msg['Subject']}")
-            print(f"date:  {msg['Date']}")
             date_string = msg["Date"]
             dt = parsedate_to_datetime(date_string)
             formatted_date = dt.strftime("%Y-%m-%d")
 
-            print(f"message id: {msg['Message-ID'].strip()}")
             new_id = msg["Message-ID"].strip()
             new_id = new_id.split("<")[1].split("@")[0]
-            print(f"new id: {new_id}")
-            print(f"From: {name} <{addr}>")
-            print(f"content type: {msg.get_content_type()}")
-            print(f"charset: {msg.get_content_charset()}")
             has_attachment = False
-            # for part in msg.walk():
-            #     # If the part has a filename, it's an attachment
-            #     if part.get_filename():
-            #         has_attachment = True
-            #         print(f"Found attachment: {part.get_filename()}")
             msg = email.message_from_bytes(raw_email, policy=policy.default)
-
-            # Now you can just do:
             for attachment in msg.iter_attachments():
                 filename = attachment.get_filename()
 
                 if filename:
-                    # 3. Get the content (policy=default handles decoding automatically)
                     content = attachment.get_content()
 
-                    # amend filename
                     filename = f"{formatted_date}_{filename}"
-                    # 4. Save the file
-                    # Note: attachment.get_content() returns bytes for binary files (PDF, JPG)
-                    # and strings for text files. 'wb' handles both safely.
                     with open(filename, "wb") as f:
                         if isinstance(content, str):
                             f.write(
@@ -216,15 +188,20 @@ class EmailAccount:
                         else:
                             f.write(content)
 
-                    print(f"Successfully downloaded: {filename}")
-                    print(attachment.get_filename())
-
-            print("-" * 30)
-
     def _markMessageAsRead(self):
         self.mail.store(self.lastReturnedMessage, "+FLAGS", "\\Seen")
 
     def _downloadAttachment(self, message, downloadPath, expectedFileName):
+        """
+        download attachments from message that match the expectedFileName
+
+        Parameters:
+          message:
+          downloadPath (string): local filepath to download the file
+          expectedFileName (string): the string expected for the attachment
+
+        Returns: none, writes attachment to disk
+        """
         msg = email.message_from_bytes(message, policy=policy.default)
 
         # Now you can just do:
@@ -238,12 +215,7 @@ class EmailAccount:
                     )
 
             if filename:
-                # 3. Get the content (policy=default handles decoding automatically)
                 content = attachment.get_content()
-
-                # 4. Save the file
-                # Note: attachment.get_content() returns bytes for binary files (PDF, JPG)
-                # and strings for text files. 'wb' handles both safely.
                 with open(downloadPath, "wb") as f:
                     if isinstance(content, str):
                         f.write(
@@ -251,9 +223,6 @@ class EmailAccount:
                         )
                     else:
                         f.write(content)
-
-                print(f"Successfully downloaded: {filename}")
-                print(attachment.get_filename())
 
     def markDownloadedEmailAsUnread(self):
         self.mail.store(self.lastReturnedMessage, "-FLAGS", "\\Seen")
@@ -266,6 +235,18 @@ class EmailAccount:
         afterDate=None,
         expectedFileName=None,
     ):
+        """
+        download the zip from email
+
+        Parameters:
+          fromAddress (string): properly formatted email address
+          subjectContaining (string): text of email subject to match
+          downloadPath (string): local file where the attachment is saved
+          afterDate (datetime): how far back to look for the message
+          expectedFileName (string): attachment name to match
+
+        Returns: none, writes attachment to disk
+        """
         message = self._getMostRecentUnreadEmailFrom(
             address=fromAddress,
             requiresAttachment=True,
@@ -293,6 +274,17 @@ class EmailAccount:
     def sendMessage(
         self, toAddress, subject, messageText, attachments: list[Attachement] = []
     ):
+        """
+        send email toAddress with subject, with message body and any attachment
+
+        Parameters:
+          toAddress (string): valid email string
+          subject (string): text for subject field
+          messageText (string): body of text for email
+          attachment (list): list type of binary objects to attach to mail
+        Returns: none, writes attachment to disk
+        """
+
         message = EmailMessage()
         message.set_content(messageText)
         message["Subject"] = subject
