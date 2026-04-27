@@ -200,10 +200,11 @@ class ActionNetworkAPI:
         failedUploads = []
         numPeople = len(people)
         with tqdm(total=numPeople, desc="Overall Progress", unit="person") as pbar:
-            for index, person in people:
-                pbar.set_postfix_str(f"Current row {index}")
+            count =  1
+            for person in people:
+                pbar.set_postfix_str(f"Current row {count}")
                 #for more details during debugging
-                # pbar.set_postfix_str(f"Current row {index} {person.firstName} {person.lastName}")
+                # pbar.set_postfix_str(f"Current row {count} {person.firstName} {person.lastName}")
                 # logging.info(
                 #     "Uploading "
                 #     + person.firstName
@@ -218,12 +219,12 @@ class ActionNetworkAPI:
                         f"({person.firstName}, {person.lastName}, {person.email})"
                     )
                     errorText = f"{err}"
-                    logging.error(f"error at row {index}")
+                    logging.error(f"error at row {count}")
                     logging.error(
                         "Failed to upload: %s because of %s", personText, errorText
                     )
                     tqdm.write(
-                        f"⚠️ Warning: {personText} failed to upload with {errorText} at row {index}"
+                        f"⚠️ Warning: {personText} failed to upload with {errorText} at row {count}"
                     )
                     failedUploads.append((personText, errorText))
                     # Sleep an extra few seconds to back off of server
@@ -237,6 +238,7 @@ class ActionNetworkAPI:
                     timeToSleep = 0.5 - timeInRequest.seconds
                     if timeToSleep > 0:
                         time.sleep(timeToSleep)
+                count = count + 1
                 pbar.update(1)
         return failedUploads
 
