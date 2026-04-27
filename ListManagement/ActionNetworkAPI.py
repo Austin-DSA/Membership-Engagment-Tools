@@ -4,6 +4,8 @@ import dataclasses
 import time
 import datetime
 import logging
+import os
+import sys
 from tqdm import tqdm
 
 
@@ -50,6 +52,10 @@ class Constants:
     # time in seconds
     BIG_SLEEP = 2
     SMALL_SLEEP = 0.35
+
+    WORKING_DIR = os.path.join(os.path.dirname(__file__), "workingDir")
+    LOG_NAME = f"action_network_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.log"
+    LOG_PATH = os.path.join(WORKING_DIR, LOG_NAME)
 
 
 @dataclasses.dataclass
@@ -127,6 +133,12 @@ class ActionNetworkAPI:
     def __init__(self, apiKey) -> None:
         self.apiKey = apiKey
         self._initializeEndpoints()
+        logging.basicConfig(
+            filename=Constants.LOG_PATH,
+            level=logging.INFO,
+            format="%(asctime)s : %(levelname)s : %(message)s",
+        )        
+        logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
     @staticmethod
     def _extractEndpoint(endpointDict: dict, api: str) -> str:
@@ -187,19 +199,16 @@ class ActionNetworkAPI:
         # Upon failure a exception will be raised and assumed to kill the program
         failedUploads = []
         numPeople = len(people)
-        logger.info(f"NUM PEOPLE: {numPeople}")
         with tqdm(total=numPeople, desc="Overall Progress", unit="person") as pbar:
-            for person in people:
-                pbar.set_postfix_str(f"Current: {person.firstName} {person.lastName}")
+            for index, person in people:
+                pbar.set_postfix_str(f"Current row {index}")
+                #for more details during debugging
+                # pbar.set_postfix_str(f"Current row {index} {person.firstName} {person.lastName}")
                 # logging.info(
                 #     "Uploading "
                 #     + person.firstName
                 #     + " "
                 #     + person.lastName
-                #     + " "
-                #     + str(currentPerson)
-                #     + "/"
-                #     + str(numPeople)
                 # )
                 startTime = datetime.datetime.now()
                 try:
@@ -209,17 +218,18 @@ class ActionNetworkAPI:
                         f"({person.firstName}, {person.lastName}, {person.email})"
                     )
                     errorText = f"{err}"
+                    logging.error(f"error at row {index}")
                     logging.error(
                         "Failed to upload: %s because of %s", personText, errorText
                     )
                     tqdm.write(
-                        f"⚠️ Warning: {personText} failed to upload with {errorText}"
+                        f"⚠️ Warning: {personText} failed to upload with {errorText} at row {index}"
                     )
                     failedUploads.append((personText, errorText))
                     # Sleep an extra few seconds to back off of server
                     time.sleep(Constants.BIG_SLEEP)
 
-                # Sleep to avoid rate limit if we aren't background processing
+                # Sleep to avoid rate limit if we aren't background processing and 429 rate limit
                 timeInRequest = datetime.datetime.now() - startTime
                 if not useBackgroundProcessing and timeInRequest < datetime.timedelta(
                     seconds=Constants.SMALL_SLEEP

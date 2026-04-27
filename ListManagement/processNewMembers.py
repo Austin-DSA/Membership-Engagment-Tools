@@ -39,7 +39,7 @@ class Constants:
 
     MEMBERSHIP_LIST_DOWNLOAD_EMAIL = "no-reply@actionkit.com"
 
-    LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.txt"
+    LOG_NAME = f"membership_upload_logs_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.log"
     LOG_PATH = os.path.join(WORKING_DIR, LOG_NAME)
 
     AN_API_KEY_FILE = "actionNetworkAPIKey.txt"
@@ -435,7 +435,7 @@ def uploadToActionNetwork(
         temp_domain = temp_email.split("@")[-1]
         # skip known junk domains. Gives HTTP 500 error by ActionNetwork
         if temp_domain in Constants.JUNK_EMAIL_DOMAINS:
-            loggin.info(f"Skipping {temp_email} (Junk Domain: {temp_domain})")
+            logging.info(f"Skipping {temp_email} (Junk Domain: {temp_domain})")
         else:
             peopleToPost.append(
                 ActionNetworkAPI.Person(
@@ -501,14 +501,14 @@ def uploadToActionNetwork(
                     ),
                 )
             )
-        api = ActionNetworkAPI.ActionNetworkAPI(
-            apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(
-                os.path.join(os.path.dirname(__file__), "actionNetworkAPIKey.txt")
-            )
+    api = ActionNetworkAPI.ActionNetworkAPI(
+        apiKey=ActionNetworkAPI.ActionNetworkAPI.readAPIKeyFromFile(
+            os.path.join(os.path.dirname(__file__), "actionNetworkAPIKey.txt")
         )
-        return api.postPeople(
-            people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing
-        )
+    )
+    return api.postPeople(
+        people=peopleToPost, useBackgroundProcessing=useBackgroundProcessing
+    )
 
 
 def main():
@@ -520,7 +520,7 @@ def main():
         inputFileName = flags.filename
         if flags.filename == "EMAIL":
             emailAccount = setupEmail()
-            # getEmails(emailAccount)
+            getEmails(emailAccount)
 
             inputFileName = dowloadMembershipListFromEmail(emailAccount)
 
@@ -528,6 +528,7 @@ def main():
 
         checkForNewCols(cols)
 
+        print(f" DEBUG: cols: {len(cols)} ros: {len(rows)}")
         googleDriveApi = None
         if flags.automateGoogleDrive:
             logging.info(f"Setting up Google Drive API")
@@ -559,6 +560,7 @@ def main():
                     rows,
                 )
             else:
+                print(f"DEBUG before AN uplodad: rows: {len(rows)}")
                 failedUploads = uploadToActionNetwork(cols, rows, flags.useANBackground)
                 if len(failedUploads) > 0:
                     success = False
@@ -570,22 +572,22 @@ def main():
         else:
             logging.info(f"Skipping Action Network")
 
-        if emailAccount is not None:
-            for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
-                if success:
-                    emailAccount.sendMessage(
-                        emailAddress,
-                        "Successful Membership Upload",
-                        "Uploaded Membership List",
-                        [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
-                    )
-                else:
-                    emailAccount.sendMessage(
-                        emailAddress,
-                        "Failed Membership Upload",
-                        "Critical errors occured during processing check logs for more details",
-                        [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
-                    )
+        # if emailAccount is not None:
+        #     for _, emailAddress in Constants.NOTIFICATION_EMAILS.items():
+        #         if success:
+        #             emailAccount.sendMessage(
+        #                 emailAddress,
+        #                 "Successful Membership Upload",
+        #                 "Uploaded Membership List",
+        #                 [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+        #             )
+        #         else:
+        #             emailAccount.sendMessage(
+        #                 emailAddress,
+        #                 "Failed Membership Upload",
+        #                 "Critical errors occured during processing check logs for more details",
+        #                 [EmailAPI.Attachement(Constants.LOG_PATH, Constants.LOG_NAME)],
+        #             )
 
     except Exception as err:
         logging.error(f"Failed to process membership list due to error")
