@@ -4,12 +4,15 @@ import dataclasses
 import time
 import datetime
 import logging
+import os
+import sys
+from tqdm import tqdm
 
 
 class Constants:
     # URLS
     API_ENTRY = "https://actionnetwork.org/api/v2/"
-    BACKGROUN_PROCESSING_QUERY_PARAM = "background_request"
+    BACKGROUND_PROCESSING_QUERY_PARAM = "background_request"
 
     # Person Keys
     EMAIL = "address"
@@ -44,6 +47,15 @@ class Constants:
     SIGNUP_HELPER_PERSON = "person"
     SIGNUP_HELPER_ADD_TAGS = "add_tags"
     SIGNUP_HELPER_REMOVE_TAGS = "remove_tags"
+
+    # BACKOFF for 429 and 50x Errors
+    # time in seconds
+    BIG_SLEEP = 2
+    SMALL_SLEEP = 0.35
+
+    WORKING_DIR = os.path.join(os.path.dirname(__file__), "workingDir")
+    LOG_NAME = f"action_network_{datetime.datetime.strftime(datetime.datetime.now(),'%Y_%m_%d_%H_%M_%S')}.log"
+    LOG_PATH = os.path.join(WORKING_DIR, LOG_NAME)
 
 
 @dataclasses.dataclass
@@ -121,6 +133,12 @@ class ActionNetworkAPI:
     def __init__(self, apiKey) -> None:
         self.apiKey = apiKey
         self._initializeEndpoints()
+        logging.basicConfig(
+            filename=Constants.LOG_PATH,
+            level=logging.INFO,
+            format="%(asctime)s : %(levelname)s : %(message)s",
+        )        
+        logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
     @staticmethod
     def _extractEndpoint(endpointDict: dict, api: str) -> str:
@@ -181,40 +199,47 @@ class ActionNetworkAPI:
         # Upon failure a exception will be raised and assumed to kill the program
         failedUploads = []
         numPeople = len(people)
-        currentPerson = 0
-        for person in people:
-            logging.info(
-                "Uploading "
-                + person.firstName
-                + " "
-                + person.lastName
-                + " "
-                + str(currentPerson)
-                + "/"
-                + str(numPeople)
-            )
-            startTime = datetime.datetime.now()
-            try:
-                self._postPerson(person, useBackgroundProcessing)
-            except Exception as err:
-                personText = f"({person.firstName}, {person.lastName}, {person.email})"
-                errorText = f"{err}"
-                logging.error(
-                    "Failed to upload: %s because of %s", personText, errorText
-                )
-                failedUploads.append((personText, errorText))
-                # Sleep an extra few seconds to back off of server
-                time.sleep(2)
+        with tqdm(total=numPeople, desc="Overall Progress", unit="person") as pbar:
+            count =  1
+            for person in people:
+                pbar.set_postfix_str(f"Current row {count}")
+                #for more details during debugging
+                # pbar.set_postfix_str(f"Current row {count} {person.firstName} {person.lastName}")
+                # logging.info(
+                #     "Uploading "
+                #     + person.firstName
+                #     + " "
+                #     + person.lastName
+                # )
+                startTime = datetime.datetime.now()
+                try:
+                    self._postPerson(person, useBackgroundProcessing)
+                except Exception as err:
+                    personText = (
+                        f"({person.firstName}, {person.lastName}, {person.email})"
+                    )
+                    errorText = f"{err}"
+                    logging.error(f"error at row {count}")
+                    logging.error(
+                        "Failed to upload: %s because of %s", personText, errorText
+                    )
+                    tqdm.write(
+                        f"⚠️ Warning: {personText} failed to upload with {errorText} at row {count}"
+                    )
+                    failedUploads.append((personText, errorText))
+                    # Sleep an extra few seconds to back off of server
+                    time.sleep(Constants.BIG_SLEEP)
 
-            # Sleep to avoid rate limit if we aren't background processing
-            timeInRequest = datetime.datetime.now() - startTime
-            if not useBackgroundProcessing and timeInRequest < datetime.timedelta(
-                seconds=0.35
-            ):
-                timeToSleep = 0.5 - timeInRequest.seconds
-                if timeToSleep > 0:
-                    time.sleep(timeToSleep)
-            currentPerson += 1
+                # Sleep to avoid rate limit if we aren't background processing and 429 rate limit
+                timeInRequest = datetime.datetime.now() - startTime
+                if not useBackgroundProcessing and timeInRequest < datetime.timedelta(
+                    seconds=Constants.SMALL_SLEEP
+                ):
+                    timeToSleep = 0.5 - timeInRequest.seconds
+                    if timeToSleep > 0:
+                        time.sleep(timeToSleep)
+                count = count + 1
+                pbar.update(1)
         return failedUploads
 
     # Do not use this directly
@@ -226,7 +251,7 @@ class ActionNetworkAPI:
         # Currently we do not support adding or removing tags
         params = {}
         if useBackgroundProcessing:
-            params[Constants.BACKGROUN_PROCESSING_QUERY_PARAM] = True
+            params[Constants.BACKGROUND_PROCESSING_QUERY_PARAM] = True
         req = requests.post(
             self.personSignupHelper,
             json=person.toSignupHelperDict(),

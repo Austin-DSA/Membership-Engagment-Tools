@@ -1,0 +1,6 @@
+actionNetworkAPIKey.txt
+googleDriveServiceAccountKey.json
+client_secrets.json
+email.txt
+pythonEnv/*
+*.zip

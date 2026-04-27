@@ -127,12 +127,16 @@ def main(args: list[str]):
         outputRows.append(
             [
                 caller,
-                phoneBankAttendanceMap[caller]
-                if caller in phoneBankAttendanceMap
-                else 0,
-                politicalEdAttendanceMap[caller]
-                if caller in politicalEdAttendanceMap
-                else 0,
+                (
+                    phoneBankAttendanceMap[caller]
+                    if caller in phoneBankAttendanceMap
+                    else 0
+                ),
+                (
+                    politicalEdAttendanceMap[caller]
+                    if caller in politicalEdAttendanceMap
+                    else 0
+                ),
                 counts[0],
                 counts[1],
             ]
